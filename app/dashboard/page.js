@@ -25,6 +25,7 @@ import BookingInfo from "@/component/BookingInfo";
 import Calender from "@/component/Calender";
 import RoomAvailabilityPage from "@/component/RoomSearchPage";
 import AllBookingInfo from "@/component/AllBookingInfo";
+import WebBooking from "@/component/WebBooking";
 
 const { Header, Sider, Content } = Layout;
 
@@ -54,6 +55,12 @@ const rolePermissions = {
       label: "Booking Info",
       icon: <InfoCircleOutlined />,
       component: <BookingInfo />,
+    },
+    {
+      key: "11",
+      label: "Web Bookings",
+      icon: <InfoCircleOutlined />,
+      component: <WebBooking />,
     },
     {
       key: "10",
