@@ -26,6 +26,7 @@ import Calender from "@/component/Calender";
 import RoomAvailabilityPage from "@/component/RoomSearchPage";
 import AllBookingInfo from "@/component/AllBookingInfo";
 import WebBooking from "@/component/WebBooking";
+import DailyStatement from "@/component/DailyStatement";
 
 const { Header, Sider, Content } = Layout;
 
@@ -55,6 +56,12 @@ const rolePermissions = {
       label: "Booking Info",
       icon: <InfoCircleOutlined />,
       component: <BookingInfo />,
+    },
+    {
+      key: "12",
+      label: "Daily Statement",
+      icon: <InfoCircleOutlined />,
+      component: <DailyStatement />,
     },
     {
       key: "11",
