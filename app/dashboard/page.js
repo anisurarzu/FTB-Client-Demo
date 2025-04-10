@@ -27,6 +27,8 @@ import RoomAvailabilityPage from "@/component/RoomSearchPage";
 import AllBookingInfo from "@/component/AllBookingInfo";
 import WebBooking from "@/component/WebBooking";
 import DailyStatement from "@/component/DailyStatement";
+import Expense from "@/component/Expense";
+import ExpenseInfo from "@/component/Expense/ExpenseInfo";
 
 const { Header, Sider, Content } = Layout;
 
@@ -74,6 +76,12 @@ const rolePermissions = {
       label: "Report Dashboard",
       icon: <InfoCircleOutlined />,
       component: <AllBookingInfo />,
+    },
+    {
+      key: "100",
+      label: "Expense",
+      icon: <InfoCircleOutlined />,
+      component: <ExpenseInfo />,
     },
     // {
     //   key: "3",

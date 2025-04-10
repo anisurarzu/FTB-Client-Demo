@@ -187,6 +187,13 @@ const Invoice = ({ params }) => {
                       width={180}
                       height={80}
                     />
+                  ) : data?.[0]?.hotelID === 6 ? (
+                    <img
+                      src="https://i.ibb.co.com/jZDnyS4V/beach-gardn.png"
+                      alt="Logo"
+                      width={180}
+                      height={80}
+                    />
                   ) : (
                     <Image
                       src="/images/Shamudro-Bari.png"
@@ -203,6 +210,8 @@ const Invoice = ({ params }) => {
                         ? "text-blue-700"
                         : data?.[0]?.hotelID === 4
                         ? "text-[#2B388F]"
+                        : data?.[0]?.hotelID === 6
+                        ? "text-[#6C9944]"
                         : "text-red-700"
                     } font-semibold text-xl`}>
                     {data?.[0]?.hotelName} INVOICE
@@ -248,6 +257,14 @@ const Invoice = ({ params }) => {
                     <p>Front Desk no: 01711877621</p>
                     <p>Reservation no: 01898841013</p>
                   </div>
+                ) : data?.[0]?.hotelID === 6 ? (
+                  <div className="mt-8 text-black text-left">
+                    <p>
+                      {`Address: Plot No-	199, Block # B, Saykat Bahumukhi Samabay Samity Ltd. Lighthouse, Kolatoli, Cox’s Bazar`}
+                    </p>
+                    <p>Front Desk no: 01898841016</p>
+                    <p>Reservation no: 01898841015</p>
+                  </div>
                 ) : (
                   <div className="text-center">
                     <div className="mt-8 text-black text-left">
@@ -268,6 +285,8 @@ const Invoice = ({ params }) => {
                       ? "text-blue-700"
                       : data?.[0]?.hotelID === 4
                       ? "text-[#2B388F]"
+                      : data?.[0]?.hotelID === 6
+                      ? "text-[#6C9944]"
                       : "text-red-700"
                   } `}>
                   Invoice Number: {data?.[0]?.bookingNo || "N/A"}
@@ -278,6 +297,8 @@ const Invoice = ({ params }) => {
                       ? "text-blue-700"
                       : data?.[0]?.hotelID === 4
                       ? "text-[#2B388F]"
+                      : data?.[0]?.hotelID === 6
+                      ? "text-[#6C9944]"
                       : "text-red-700"
                   }  font-bold`}>
                   Booking Date:
@@ -313,6 +334,8 @@ const Invoice = ({ params }) => {
                           ? "bg-blue-700"
                           : data?.[0]?.hotelID === 4
                           ? "bg-[#2B388F]"
+                          : data?.[0]?.hotelID === 6
+                          ? "bg-[#6C9944]"
                           : "bg-red-700"
                       } text-white`}>
                       <th className="border border-gray-400 px-2 pb-2 print:pb-0 print:py-1">
@@ -472,6 +495,8 @@ const Invoice = ({ params }) => {
                     ? "11:30 AM & Check out - 11:00 AM "
                     : data?.[0]?.hotelID === 3
                     ? "Check-in 2 PM & Check out - 12 PM "
+                    : data?.[0]?.hotelID === 6
+                    ? "Check in - 11:30 PM & Check out - 11:00 AM"
                     : "Check in - 12:30 PM & Check out - 11:00 AM"}
                 </p>
               </div>
