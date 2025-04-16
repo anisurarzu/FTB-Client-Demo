@@ -10,6 +10,7 @@ import { CopyOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import DatePicker from "antd/es/date-picker";
 import { useFormik } from "formik";
+import DailySummary from "./DailySummary";
 
 const DailyStatement = () => {
   const [bookings, setBookings] = useState({
@@ -19,14 +20,7 @@ const DailyStatement = () => {
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [submitting, setSubmitting] = useState({});
-  const [dailySummary, setDailySummary] = useState({
-    openingBalance: 0,
-    dailyIncome: 0,
-    totalBalance: 0,
-    dailyExpenses: 0,
-    closingBalance: 0,
-  });
-  const [previousDayClosingBalance, setPreviousDayClosingBalance] = useState(0);
+  const [dailyIncome, setDailyIncome] = useState(0);
 
   const formik = useFormik({
     initialValues: {},
@@ -34,158 +28,7 @@ const DailyStatement = () => {
   });
 
   const isSameDay = (date1, date2) => {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    return (
-      d1.getFullYear() === d2.getFullYear() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getDate() === d2.getDate()
-    );
-  };
-
-  const fetchPreviousDayClosingBalance = async (date) => {
-    try {
-      const prevDate = date.subtract(1, "day").format("YYYY-MM-DD");
-      const response = await coreAxios.get(`/daily-summary/${prevDate}`);
-      if (response.status === 200) {
-        setPreviousDayClosingBalance(response.data.closingBalance || 0);
-      }
-    } catch (error) {
-      setPreviousDayClosingBalance(0);
-    }
-  };
-
-  const fetchBookingsByDate = async (date) => {
-    setLoading(true);
-    try {
-      await fetchPreviousDayClosingBalance(date);
-
-      const formattedDate = date.format("YYYY-MM-DD");
-      const response = await coreAxios.get(
-        `/bookings/check-in/${formattedDate}`
-      );
-
-      if (response.status === 200) {
-        const data = response.data.data || {
-          regularInvoice: [],
-          unPaidInvoice: [],
-        };
-
-        // Filter out unpaid invoices that are already in regular invoices
-        const regularInvoiceIds = data.regularInvoice.map(
-          (invoice) => invoice._id
-        );
-        const filteredUnpaidInvoices = data.unPaidInvoice.filter(
-          (invoice) => !regularInvoiceIds.includes(invoice._id)
-        );
-
-        setBookings({
-          regularInvoice: data.regularInvoice || [],
-          unPaidInvoice: filteredUnpaidInvoices || [],
-        });
-
-        const initialValues = {};
-
-        // Process regular invoices
-        data.regularInvoice?.forEach((booking) => {
-          const dateEntry = booking.invoiceDetails?.find((entry) =>
-            isSameDay(new Date(entry.date), date.toDate())
-          );
-
-          initialValues[booking._id] = {
-            totalPaid: booking.totalPaid || 0,
-            dailyAmount: dateEntry?.dailyAmount || 0,
-          };
-        });
-
-        // Process unpaid invoices
-        filteredUnpaidInvoices?.forEach((booking) => {
-          const dateEntry = booking.invoiceDetails?.find((entry) =>
-            isSameDay(new Date(entry.date), date.toDate())
-          );
-
-          initialValues[booking._id] = {
-            totalPaid: booking.totalPaid || 0,
-            dailyAmount: dateEntry?.dailyAmount || 0,
-          };
-        });
-
-        formik.setValues(initialValues);
-
-        // Calculate daily income (total daily amount)
-        const regularIncome = data.regularInvoice?.reduce((sum, booking) => {
-          const dateEntry = booking.invoiceDetails?.find((entry) =>
-            isSameDay(new Date(entry.date), date.toDate())
-          );
-          return sum + (dateEntry?.dailyAmount || 0);
-        }, 0);
-
-        const unpaidIncome = filteredUnpaidInvoices?.reduce((sum, booking) => {
-          const dateEntry = booking.invoiceDetails?.find((entry) =>
-            isSameDay(new Date(entry.date), date.toDate())
-          );
-          return sum + (dateEntry?.dailyAmount || 0);
-        }, 0);
-
-        const dailyIncome = (regularIncome || 0) + (unpaidIncome || 0);
-
-        // Calculate daily summary based on new requirements
-        const openingBalance = previousDayClosingBalance;
-        const totalBalance = openingBalance + dailyIncome;
-        const dailyExpenses = 0; // Temporary value
-        const closingBalance = totalBalance - dailyExpenses;
-
-        setDailySummary({
-          openingBalance,
-          dailyIncome,
-          totalBalance,
-          dailyExpenses,
-          closingBalance,
-        });
-      }
-    } catch (error) {
-      message.error("Failed to fetch bookings");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async (bookingId) => {
-    setSubmitting((prev) => ({ ...prev, [bookingId]: true }));
-    try {
-      const dailyAmount = formik.values[bookingId]?.dailyAmount || 0;
-
-      // Find the booking to get totalBill
-      const booking = [
-        ...bookings.regularInvoice,
-        ...bookings.unPaidInvoice,
-      ].find((b) => b._id === bookingId);
-
-      if (!booking) {
-        throw new Error("Booking not found");
-      }
-
-      // Calculate new totalPaid (current total + new daily amount)
-      const currentTotalPaid = booking.totalPaid || 0;
-      const newTotalPaid = currentTotalPaid + dailyAmount;
-      const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
-
-      const response = await coreAxios.put(`/booking/details/${bookingId}`, {
-        totalPaid: newTotalPaid,
-        duePayment: newDuePayment,
-        dailyAmount: dailyAmount,
-        searchDate: selectedDate.toDate(),
-      });
-
-      if (response.status === 200) {
-        message.success("Payment updated successfully");
-        await fetchBookingsByDate(selectedDate);
-      }
-    } catch (error) {
-      message.error("Failed to update payment");
-    } finally {
-      setSubmitting((prev) => ({ ...prev, [bookingId]: false }));
-    }
+    return dayjs(date1).isSame(dayjs(date2), "day");
   };
 
   const getCumulativeTotals = (booking) => {
@@ -209,6 +52,99 @@ const DailyStatement = () => {
     };
   };
 
+  const fetchBookingsByDate = async (date) => {
+    setLoading(true);
+    try {
+      const formattedDate = date.format("YYYY-MM-DD");
+      const response = await coreAxios.get(
+        `/bookings/check-in/${formattedDate}`
+      );
+
+      if (response.status === 200) {
+        const data = response.data.data || {
+          regularInvoice: [],
+          unPaidInvoice: [],
+        };
+
+        const regularInvoiceIds = data.regularInvoice.map(
+          (invoice) => invoice._id
+        );
+        const filteredUnpaidInvoices = data.unPaidInvoice.filter(
+          (invoice) => !regularInvoiceIds.includes(invoice._id)
+        );
+
+        setBookings({
+          regularInvoice: data.regularInvoice || [],
+          unPaidInvoice: filteredUnpaidInvoices || [],
+        });
+
+        const initialValues = {};
+
+        // Process all invoices
+        [...data.regularInvoice, ...filteredUnpaidInvoices].forEach(
+          (booking) => {
+            const dateEntry = booking.invoiceDetails?.find((entry) =>
+              isSameDay(new Date(entry.date), date.toDate())
+            );
+
+            initialValues[booking._id] = {
+              totalPaid: booking.totalPaid || 0,
+              dailyAmount: dateEntry?.dailyAmount || 0,
+            };
+          }
+        );
+
+        formik.setValues(initialValues);
+
+        // Calculate daily income
+        const calculatedDailyIncome = Object.values(initialValues).reduce(
+          (sum, value) => sum + (value.dailyAmount || 0),
+          0
+        );
+        setDailyIncome(calculatedDailyIncome);
+      }
+    } catch (error) {
+      message.error("Failed to fetch bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdate = async (bookingId) => {
+    setSubmitting((prev) => ({ ...prev, [bookingId]: true }));
+    try {
+      const dailyAmount = formik.values[bookingId]?.dailyAmount || 0;
+      const booking = [
+        ...bookings.regularInvoice,
+        ...bookings.unPaidInvoice,
+      ].find((b) => b._id === bookingId);
+
+      if (!booking) {
+        throw new Error("Booking not found");
+      }
+
+      const currentTotalPaid = booking.totalPaid || 0;
+      const newTotalPaid = currentTotalPaid + dailyAmount;
+      const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
+
+      const response = await coreAxios.put(`/booking/details/${bookingId}`, {
+        totalPaid: newTotalPaid,
+        duePayment: newDuePayment,
+        dailyAmount: dailyAmount,
+        searchDate: selectedDate.toISOString(),
+      });
+
+      if (response.status === 200) {
+        message.success("Payment updated successfully");
+        await fetchBookingsByDate(selectedDate);
+      }
+    } catch (error) {
+      message.error("Failed to update payment");
+    } finally {
+      setSubmitting((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
   useEffect(() => {
     fetchBookingsByDate(selectedDate);
   }, [selectedDate]);
@@ -218,7 +154,7 @@ const DailyStatement = () => {
     setSelectedDate((prev) => prev.subtract(1, "day"));
   const handleNextDay = () => setSelectedDate((prev) => prev.add(1, "day"));
 
-  // Calculate totals for regular invoices
+  // Calculate totals
   const regularTotals = bookings.regularInvoice?.reduce(
     (acc, booking) => {
       const totals = getCumulativeTotals(booking);
@@ -236,7 +172,6 @@ const DailyStatement = () => {
     { totalBill: 0, totalPaid: 0, dailyAmount: 0, dueAmount: 0 }
   );
 
-  // Calculate totals for unpaid invoices
   const unpaidTotals = bookings.unPaidInvoice?.reduce(
     (acc, booking) => {
       const totals = getCumulativeTotals(booking);
@@ -429,12 +364,17 @@ const DailyStatement = () => {
                           <InputNumber
                             min={0}
                             value={formik.values[booking._id]?.dailyAmount || 0}
-                            onChange={(value) =>
+                            onChange={(value) => {
                               formik.setFieldValue(
                                 `${booking._id}.dailyAmount`,
                                 value
-                              )
-                            }
+                              );
+                              const newDailyIncome =
+                                dailyIncome -
+                                (formik.values[booking._id]?.dailyAmount || 0) +
+                                value;
+                              setDailyIncome(newDailyIncome);
+                            }}
                             style={{ width: "80px" }}
                           />
                         </td>
@@ -575,12 +515,17 @@ const DailyStatement = () => {
                           <InputNumber
                             min={0}
                             value={formik.values[booking._id]?.dailyAmount || 0}
-                            onChange={(value) =>
+                            onChange={(value) => {
                               formik.setFieldValue(
                                 `${booking._id}.dailyAmount`,
                                 value
-                              )
-                            }
+                              );
+                              const newDailyIncome =
+                                dailyIncome -
+                                (formik.values[booking._id]?.dailyAmount || 0) +
+                                value;
+                              setDailyIncome(newDailyIncome);
+                            }}
                             style={{ width: "80px" }}
                           />
                         </td>
@@ -639,54 +584,7 @@ const DailyStatement = () => {
         </div>
       </div>
 
-      {/* Daily Summary Table */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">Daily Summary</h3>
-        <table className="w-full max-w-md border border-green-600">
-          <thead>
-            <tr style={{ backgroundColor: "#4CAF50", color: "white" }}>
-              <th className="border border-green-600 p-2 text-left">Item</th>
-              <th className="border border-green-600 p-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="border border-green-600 p-2">Opening Balance</td>
-              <td className="border border-green-600 p-2 text-right">
-                {dailySummary.openingBalance}
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-green-600 p-2">Daily Income</td>
-              <td className="border border-green-600 p-2 text-right">
-                {dailySummary.dailyIncome}
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-green-600 p-2 font-bold">
-                Total Balance
-              </td>
-              <td className="border border-green-600 p-2 text-right font-bold">
-                {dailySummary.totalBalance}
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-green-600 p-2">Daily Expenses</td>
-              <td className="border border-green-600 p-2 text-right">
-                {dailySummary.dailyExpenses}
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-green-600 p-2 font-bold">
-                Closing Balance
-              </td>
-              <td className="border border-green-600 p-2 text-right font-bold">
-                {dailySummary.closingBalance}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <DailySummary selectedDate={selectedDate} dailyIncome={dailyIncome} />
     </div>
   );
 };
