@@ -20,6 +20,7 @@ import {
   Option,
   Switch,
 } from "antd";
+
 import { useFormik } from "formik";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -28,7 +29,7 @@ import moment from "moment";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { v4 as uuidv4 } from "uuid";
 import coreAxios from "@/utils/axiosInstance";
-import { CopyOutlined } from "@ant-design/icons";
+import { CopyOutlined, PlusOutlined } from "@ant-design/icons";
 import Link from "next/link"; // For routing
 
 const BookingInfo = () => {
@@ -447,7 +448,13 @@ const BookingInfo = () => {
       totalBill: 0,
       advancePayment: 0,
       duePayment: 0,
-      paymentMethod: "",
+      payments: [
+        {
+          method: "",
+          amount: "",
+          transactionId: "",
+        },
+      ],
       transactionId: "",
       note: "",
       bookedBy: userInfo ? userInfo?.username : "",
@@ -460,6 +467,18 @@ const BookingInfo = () => {
 
     onSubmit: async (values, { resetForm }) => {
       try {
+        // Calculate total payment amount
+        const totalPaid = values.payments.reduce(
+          (sum, p) => sum + (parseFloat(p.amount) || 0),
+          0
+        );
+
+        // Validate that total paid doesn't exceed total bill
+        if (totalPaid > values.totalBill) {
+          message.error("Total payment amount cannot exceed total bill!");
+          return;
+        }
+
         setLoading(true);
         await updateRoomBookingStatus(values);
         resetForm();
@@ -1413,22 +1432,117 @@ const BookingInfo = () => {
 
               <div style={{ display: "flex", gap: "16px" }}>
                 <div style={{ flex: 1 }}>
-                  <Form.Item label="Payment Method" className="mb-2">
-                    <Select
-                      required={true}
-                      name="paymentMethod"
-                      value={formik.values.paymentMethod}
-                      onChange={(value) =>
-                        formik.setFieldValue("paymentMethod", value)
-                      }>
-                      <Select.Option value="BKASH">BKASH</Select.Option>
-                      <Select.Option value="NAGAD">NAGAD</Select.Option>
-                      <Select.Option value="BANK">BANK</Select.Option>
-                      <Select.Option value="CASH">CASH</Select.Option>
-                    </Select>
+                  {/* Payment Section */}
+                  {/* Payment Section */}
+
+                  <Form.Item label="Payment Methods" className="mb-2">
+                    {formik.values.payments.map((payment, index) => (
+                      <div key={index} style={{ marginBottom: 16 }}>
+                        <Row gutter={16}>
+                          <Col span={8}>
+                            <Form.Item label="Method" required={index === 0}>
+                              <Select
+                                value={payment.method}
+                                onChange={(value) => {
+                                  const payments = [...formik.values.payments];
+                                  payments[index].method = value;
+                                  formik.setFieldValue("payments", payments);
+                                }}>
+                                <Select.Option value="BKASH">
+                                  BKASH
+                                </Select.Option>
+                                <Select.Option value="NAGAD">
+                                  NAGAD
+                                </Select.Option>
+                                <Select.Option value="BANK">BANK</Select.Option>
+                                <Select.Option value="CASH">CASH</Select.Option>
+                              </Select>
+                            </Form.Item>
+                          </Col>
+                          <Col span={8}>
+                            <Form.Item label="Amount" required={index === 0}>
+                              <Input
+                                type="number"
+                                value={payment.amount}
+                                onChange={(e) => {
+                                  const payments = [...formik.values.payments];
+                                  payments[index].amount = e.target.value;
+                                  formik.setFieldValue("payments", payments);
+
+                                  // Calculate total paid amount
+                                  const totalPaid = payments.reduce(
+                                    (sum, p) =>
+                                      sum + (parseFloat(p.amount) || 0),
+                                    0
+                                  );
+                                  formik.setFieldValue(
+                                    "advancePayment",
+                                    totalPaid
+                                  );
+                                  formik.setFieldValue(
+                                    "duePayment",
+                                    formik.values.totalBill - totalPaid
+                                  );
+                                }}
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col span={8}>
+                            <Form.Item
+                              label="Transaction ID"
+                              required={index === 0}>
+                              <Input
+                                value={payment.transactionId}
+                                onChange={(e) => {
+                                  const payments = [...formik.values.payments];
+                                  payments[index].transactionId =
+                                    e.target.value;
+                                  formik.setFieldValue("payments", payments);
+                                }}
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </div>
+                    ))}
+
+                    {formik.values.payments.length < 3 && (
+                      <Button
+                        type="dashed"
+                        onClick={() => {
+                          formik.setFieldValue("payments", [
+                            ...formik.values.payments,
+                            { method: "", amount: "", transactionId: "" },
+                          ]);
+                        }}
+                        block
+                        icon={<PlusOutlined />}>
+                        Add Payment Method
+                      </Button>
+                    )}
+
+                    {/* Show total payment amount and validation */}
+                    <div style={{ marginTop: 16 }}>
+                      <strong>Total Paid: </strong>
+                      {formik.values.payments.reduce(
+                        (sum, p) => sum + (parseFloat(p.amount) || 0),
+                        0
+                      )}
+                      {formik.values.payments.reduce(
+                        (sum, p) => sum + (parseFloat(p.amount) || 0),
+                        0
+                      ) > formik.values.totalBill && (
+                        <Alert
+                          message="Total payment amount exceeds total bill!"
+                          type="error"
+                          showIcon
+                          style={{ marginTop: 8 }}
+                        />
+                      )}
+                    </div>
                   </Form.Item>
                 </div>
-                <div style={{ flex: 1 }}>
+                {/* <div style={{ flex: 1 }}>
                   <Form.Item label="Transaction ID" className="mb-2">
                     <Input
                       required={true}
@@ -1437,7 +1551,7 @@ const BookingInfo = () => {
                       onChange={formik.handleChange}
                     />
                   </Form.Item>
-                </div>
+                </div> */}
               </div>
               <div style={{ display: "flex", gap: "16px" }}>
                 {/* Other fields in this row */}
