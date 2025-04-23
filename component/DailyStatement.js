@@ -31,24 +31,41 @@ const DailyStatement = () => {
     return dayjs(date1).isSame(dayjs(date2), "day");
   };
 
-  const getCumulativeTotals = (booking) => {
-    if (!booking.invoiceDetails || !Array.isArray(booking.invoiceDetails)) {
-      return {
-        totalPaid: booking.totalPaid || 0,
-        dailyAmount: booking.dailyAmount || 0,
-        dueAmount: (booking.totalBill || 0) - (booking.totalPaid || 0),
-      };
-    }
-
-    const sumTotalPaid = booking.invoiceDetails.reduce(
-      (sum, entry) => sum + (entry.totalPaid || 0),
-      0
+  // Calculate payment totals by method
+  const getPaymentTotals = (payments) => {
+    return (
+      payments?.reduce(
+        (acc, payment) => {
+          if (payment.method === "BKASH") {
+            acc.bkash += payment.amount || 0;
+          } else if (payment.method === "BANK") {
+            acc.bank += payment.amount || 0;
+          }
+          return acc;
+        },
+        { bkash: 0, bank: 0 }
+      ) || { bkash: 0, bank: 0 }
     );
+  };
+
+  const getCumulativeTotals = (booking) => {
+    const paymentTotals = getPaymentTotals(booking.payments);
+
+    // Use the booking.totalPaid directly if it exists, otherwise calculate from payments
+    const totalPaid =
+      booking.totalPaid !== undefined
+        ? booking.totalPaid
+        : (booking.payments || []).reduce(
+            (sum, payment) => sum + (payment.amount || 0),
+            0
+          );
 
     return {
-      totalPaid: sumTotalPaid,
+      totalPaid: totalPaid,
       dailyAmount: booking.dailyAmount || 0,
-      dueAmount: (booking.totalBill || 0) - sumTotalPaid,
+      dueAmount: (booking.totalBill || 0) - totalPaid,
+      bkash: paymentTotals.bkash,
+      bank: paymentTotals.bank,
     };
   };
 
@@ -88,7 +105,7 @@ const DailyStatement = () => {
             );
 
             initialValues[booking._id] = {
-              totalPaid: booking.totalPaid || 0,
+              totalPaid: getCumulativeTotals(booking).totalPaid || 0,
               dailyAmount: dateEntry?.dailyAmount || 0,
             };
           }
@@ -123,9 +140,13 @@ const DailyStatement = () => {
         throw new Error("Booking not found");
       }
 
-      const currentTotalPaid = booking.totalPaid || 0;
-      const newTotalPaid = currentTotalPaid + dailyAmount;
+      const totals = getCumulativeTotals(booking);
+      const newTotalPaid = totals.totalPaid + dailyAmount;
       const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
+
+      if (newTotalPaid > booking.totalBill) {
+        throw new Error("Total paid cannot exceed total bill");
+      }
 
       const response = await coreAxios.put(`/booking/details/${bookingId}`, {
         totalPaid: newTotalPaid,
@@ -139,7 +160,7 @@ const DailyStatement = () => {
         await fetchBookingsByDate(selectedDate);
       }
     } catch (error) {
-      message.error("Failed to update payment");
+      message.error(error.message || "Failed to update payment");
     } finally {
       setSubmitting((prev) => ({ ...prev, [bookingId]: false }));
     }
@@ -167,9 +188,18 @@ const DailyStatement = () => {
         totalPaid: acc.totalPaid + (totals.totalPaid || 0),
         dailyAmount: acc.dailyAmount + (dateEntry?.dailyAmount || 0),
         dueAmount: acc.dueAmount + (totals.dueAmount || 0),
+        bkash: acc.bkash + (totals.bkash || 0),
+        bank: acc.bank + (totals.bank || 0),
       };
     },
-    { totalBill: 0, totalPaid: 0, dailyAmount: 0, dueAmount: 0 }
+    {
+      totalBill: 0,
+      totalPaid: 0,
+      dailyAmount: 0,
+      dueAmount: 0,
+      bkash: 0,
+      bank: 0,
+    }
   );
 
   const unpaidTotals = bookings.unPaidInvoice?.reduce(
@@ -184,9 +214,18 @@ const DailyStatement = () => {
         totalPaid: acc.totalPaid + (totals.totalPaid || 0),
         dailyAmount: acc.dailyAmount + (dateEntry?.dailyAmount || 0),
         dueAmount: acc.dueAmount + (totals.dueAmount || 0),
+        bkash: acc.bkash + (totals.bkash || 0),
+        bank: acc.bank + (totals.bank || 0),
       };
     },
-    { totalBill: 0, totalPaid: 0, dailyAmount: 0, dueAmount: 0 }
+    {
+      totalBill: 0,
+      totalPaid: 0,
+      dailyAmount: 0,
+      dueAmount: 0,
+      bkash: 0,
+      bank: 0,
+    }
   );
 
   return (
@@ -290,6 +329,9 @@ const DailyStatement = () => {
                   {/* Regular Invoices */}
                   {bookings.regularInvoice?.map((booking, index) => {
                     const totals = getCumulativeTotals(booking);
+                    const remainingAmount =
+                      booking.totalBill - totals.totalPaid;
+
                     return (
                       <tr
                         key={booking._id}
@@ -343,14 +385,10 @@ const DailyStatement = () => {
                           {booking.totalBill}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {booking.paymentMethod === "bkash"
-                            ? booking.advancePayment
-                            : "-"}
+                          {totals.bkash || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {booking.paymentMethod === "bank"
-                            ? booking.advancePayment
-                            : "-"}
+                          {totals.bank || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
@@ -363,8 +401,15 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
                             min={0}
+                            max={remainingAmount}
                             value={formik.values[booking._id]?.dailyAmount || 0}
                             onChange={(value) => {
+                              if (value > remainingAmount) {
+                                message.warning(
+                                  "Daily amount cannot exceed due amount"
+                                );
+                                return;
+                              }
                               formik.setFieldValue(
                                 `${booking._id}.dailyAmount`,
                                 value
@@ -375,6 +420,7 @@ const DailyStatement = () => {
                                 value;
                               setDailyIncome(newDailyIncome);
                             }}
+                            disabled={totals.dueAmount <= 0}
                             style={{ width: "80px" }}
                           />
                         </td>
@@ -387,6 +433,7 @@ const DailyStatement = () => {
                             size="small"
                             onClick={() => handleUpdate(booking._id)}
                             loading={submitting[booking._id]}
+                            disabled={totals.dueAmount <= 0}
                             style={{ backgroundColor: "#4CAF50" }}>
                             Update
                           </Button>
@@ -407,11 +454,11 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.totalBill}
                         </td>
-                        <td className="border border-green-600 p-2 text-center">
-                          -
+                        <td className="border border-green-600 p-2 text-center font-bold">
+                          {regularTotals?.bkash}
                         </td>
-                        <td className="border border-green-600 p-2 text-center">
-                          -
+                        <td className="border border-green-600 p-2 text-center font-bold">
+                          {regularTotals?.bank}
                         </td>
                         <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.totalPaid}
@@ -446,6 +493,9 @@ const DailyStatement = () => {
                   {/* Unpaid Invoices */}
                   {bookings.unPaidInvoice?.map((booking, index) => {
                     const totals = getCumulativeTotals(booking);
+                    const remainingAmount =
+                      booking.totalBill - totals.totalPaid;
+
                     return (
                       <tr
                         key={booking._id}
@@ -494,14 +544,10 @@ const DailyStatement = () => {
                           {booking.totalBill}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {booking.paymentMethod === "bkash"
-                            ? booking.advancePayment
-                            : "-"}
+                          {totals.bkash || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {booking.paymentMethod === "bank"
-                            ? booking.advancePayment
-                            : "-"}
+                          {totals.bank || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
@@ -514,8 +560,15 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
                             min={0}
+                            max={remainingAmount}
                             value={formik.values[booking._id]?.dailyAmount || 0}
                             onChange={(value) => {
+                              if (value > remainingAmount) {
+                                message.warning(
+                                  "Daily amount cannot exceed due amount"
+                                );
+                                return;
+                              }
                               formik.setFieldValue(
                                 `${booking._id}.dailyAmount`,
                                 value
@@ -526,6 +579,7 @@ const DailyStatement = () => {
                                 value;
                               setDailyIncome(newDailyIncome);
                             }}
+                            disabled={totals.dueAmount <= 0}
                             style={{ width: "80px" }}
                           />
                         </td>
@@ -538,6 +592,7 @@ const DailyStatement = () => {
                             size="small"
                             onClick={() => handleUpdate(booking._id)}
                             loading={submitting[booking._id]}
+                            disabled={totals.dueAmount <= 0}
                             style={{ backgroundColor: "#4CAF50" }}>
                             Update
                           </Button>
@@ -557,11 +612,11 @@ const DailyStatement = () => {
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.totalBill}
                       </td>
-                      <td className="border border-green-600 p-2 text-center">
-                        -
+                      <td className="border border-green-600 p-2 text-center font-bold">
+                        {unpaidTotals?.bkash}
                       </td>
-                      <td className="border border-green-600 p-2 text-center">
-                        -
+                      <td className="border border-green-600 p-2 text-center font-bold">
+                        {unpaidTotals?.bank}
                       </td>
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.totalPaid}

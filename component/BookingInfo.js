@@ -175,6 +175,7 @@ const BookingInfo = () => {
   const updateRoomBookingStatus = async (values) => {
     setLoading(true);
 
+    // Utility function to generate all dates between two dates
     const getBookedDates = (checkInDate, checkOutDate) => {
       const startDate = dayjs(checkInDate);
       const endDate = dayjs(checkOutDate);
@@ -186,11 +187,15 @@ const BookingInfo = () => {
       return bookedDates;
     };
 
-    // Calculate total paid amount from payments array
-    const totalPaid = values.payments.reduce(
-      (sum, p) => sum + (parseFloat(p.amount) || 0),
-      0
-    );
+    // Properly parse payment amounts to numbers and calculate total paid
+    const totalPaid = values.payments.reduce((sum, p) => {
+      // Convert amount to number (handle empty/undefined cases)
+      const amount = parseFloat(p.amount) || 0;
+      return sum + amount;
+    }, 0);
+
+    // Calculate due payment (ensure it's never negative)
+    const duePayment = Math.max(0, values.totalBill - totalPaid);
 
     const bookingUpdatePayload = {
       hotelID: values?.hotelID,
@@ -209,8 +214,8 @@ const BookingInfo = () => {
             children: values?.children,
             paymentDetails: {
               totalBill: values.totalBill,
-              advancePayment: totalPaid, // Use calculated totalPaid
-              duePayment: values.totalBill - totalPaid, // Calculate due payment
+              advancePayment: totalPaid,
+              duePayment: duePayment,
               paymentMethod: values.paymentMethod,
               transactionId: values.transactionId,
             },
@@ -226,12 +231,13 @@ const BookingInfo = () => {
             hotelID: prevData?.hotelID,
             categoryName: prevData?.roomCategoryName,
             roomName: prevData?.roomNumberName,
-            datesToDelete: getAllDatesBetween(
+            datesToDelete: getBookedDates(
               prevData?.checkInDate,
               prevData?.checkOutDate
             ),
           },
         });
+
         if (deleteResponse.status === 200) {
           const updateBookingResponse = await coreAxios.put(
             `/hotel/room/updateBooking`,
@@ -245,83 +251,67 @@ const BookingInfo = () => {
               checkOut: dayjs(values.checkOutDate).format("YYYY-MM-DD"),
               key: uuidv4(),
               bookingID: updateBookingResponse?.data?.hotel?._id,
-              advancePayment: totalPaid, // Use calculated totalPaid
-              duePayment: values.totalBill - totalPaid, // Calculate due payment
+              advancePayment: totalPaid,
+              duePayment: duePayment,
+              payments: values.payments.map((payment) => ({
+                ...payment,
+                amount: parseFloat(payment.amount) || 0,
+                date: payment.date || new Date().toISOString(),
+              })),
             };
 
-            let response;
-            if (isEditing) {
-              response = await coreAxios.put(
-                `booking/${editingKey}`,
-                newBooking
-              );
-            } else {
-              response = await coreAxios.post("booking", newBooking);
-            }
+            const response = await coreAxios.put(
+              `booking/${editingKey}`,
+              newBooking
+            );
 
             if (response.status === 200) {
-              message.success("Booking created/updated successfully!");
-            } else {
-              message.error("Failed to create/update booking.");
+              message.success("Booking updated successfully!");
+              setVisible(false);
+              setIsEditing(false);
+              setEditingKey(null);
+              fetchHotelInfo();
+              fetchBookings();
             }
-
-            setVisible(false);
-            setIsEditing(false);
-            setEditingKey(null);
-            setBookings([]);
-            setFilteredBookings([]);
-            message.success("Room booking status updated successfully!");
-
-            fetchHotelInfo();
-            fetchBookings();
-          } else {
-            message.error("Failed to update room booking status.");
           }
         }
       } else {
+        const newBooking = {
+          ...values,
+          checkIn: dayjs(values.checkInDate).format("YYYY-MM-DD"),
+          checkOut: dayjs(values.checkOutDate).format("YYYY-MM-DD"),
+          key: uuidv4(),
+          advancePayment: totalPaid,
+          duePayment: duePayment,
+          payments: values.payments.map((payment) => ({
+            ...payment,
+            amount: parseFloat(payment.amount) || 0,
+            date: new Date().toISOString(),
+          })),
+        };
+
         const updateBookingResponse = await coreAxios.put(
           `/hotel/room/updateBooking`,
           bookingUpdatePayload
         );
-        if (updateBookingResponse.status === 200) {
-          const newBooking = {
-            ...values,
-            checkIn: dayjs(values.checkInDate).format("YYYY-MM-DD"),
-            checkOut: dayjs(values.checkOutDate).format("YYYY-MM-DD"),
-            key: uuidv4(),
-            bookingID: updateBookingResponse?.data?.hotel?._id,
-            advancePayment: totalPaid, // Use calculated totalPaid
-            duePayment: values.totalBill - totalPaid, // Calculate due payment
-          };
 
-          let response;
-          if (isEditing) {
-            response = await coreAxios.put(`booking/${editingKey}`, newBooking);
-          } else {
-            response = await coreAxios.post("booking", newBooking);
-          }
+        if (updateBookingResponse.status === 200) {
+          newBooking.bookingID = updateBookingResponse?.data?.hotel?._id;
+          const response = await coreAxios.post("booking", newBooking);
 
           if (response.status === 200) {
-            message.success("Booking created/updated successfully!");
-          } else {
-            message.error("Failed to create/update booking.");
+            message.success("Booking created successfully!");
+            setVisible(false);
+            setBookings([]);
+            setFilteredBookings([]);
+            fetchHotelInfo();
+            fetchBookings();
           }
-
-          setVisible(false);
-          setIsEditing(false);
-          setEditingKey(null);
-          setBookings([]);
-          setFilteredBookings([]);
-          message.success("Room booking status updated successfully!");
-
-          fetchHotelInfo();
-          fetchBookings();
-        } else {
-          message.error("Failed to update room booking status.");
         }
       }
     } catch (error) {
-      message.error("An error occurred while updating the booking.");
+      console.error("Booking error:", error);
+      message.error("An error occurred while processing the booking.");
     } finally {
       setLoading(false);
     }
@@ -352,9 +342,10 @@ const BookingInfo = () => {
       duePayment: 0,
       payments: [
         {
-          method: "",
-          amount: "",
+          method: "CASH", // Default method
+          amount: "0",
           transactionId: "",
+          date: new Date().toISOString(),
         },
       ],
       transactionId: "",
@@ -1307,14 +1298,15 @@ const BookingInfo = () => {
                                 value={payment.amount}
                                 onChange={(e) => {
                                   const payments = [...formik.values.payments];
-                                  payments[index].amount = e.target.value;
+                                  // Ensure we store the amount as a number
+                                  payments[index].amount =
+                                    parseFloat(e.target.value) || 0;
                                   formik.setFieldValue("payments", payments);
 
-                                  // Calculate total paid amount
+                                  // Recalculate totals
                                   const totalPaid = payments.reduce(
                                     (sum, p) =>
-                                      sum + (parseFloat(p.amount) || 0),
-                                    0
+                                      sum + (parseFloat(p.amount) || 0, 0)
                                   );
                                   formik.setFieldValue(
                                     "advancePayment",
@@ -1322,7 +1314,10 @@ const BookingInfo = () => {
                                   );
                                   formik.setFieldValue(
                                     "duePayment",
-                                    formik.values.totalBill - totalPaid
+                                    Math.max(
+                                      0,
+                                      formik.values.totalBill - totalPaid
+                                    )
                                   );
                                 }}
                               />
