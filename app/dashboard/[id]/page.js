@@ -228,8 +228,8 @@ const Invoice = ({ params }) => {
                   <div className="text-center">
                     <div className="mt-8 text-black text-left">
                       <p>
-                        Address: Block # A, Plot # 17, Kolatoli Main Road, Cox's
-                        Bazar 4700
+                        {` Address: Block # A, Plot # 17, Kolatoli Main Road, Cox's
+                        Bazar 4700`}
                       </p>
                       <p>Front Desk no: 01818083949</p>
                       <p>Reservation no: 01898841012</p>
@@ -239,8 +239,8 @@ const Invoice = ({ params }) => {
                   <div className="text-center">
                     <div className="mt-8 text-black text-left">
                       <p>
-                        Address: Plot #65, Block# B, Sugandha Point, Kolatoli,
-                        Cox's Bazar
+                        {`Address: Plot #65, Block# B, Sugandha Point, Kolatoli,
+                        Cox's Bazar`}
                       </p>
                       <p>Front Desk no: 01313708031</p>
                       <p>Reservation no: 01898841013</p>
@@ -250,7 +250,7 @@ const Invoice = ({ params }) => {
                   <div className="text-center">
                     <div className="mt-8 text-black text-left">
                       <p>
-                        Address: Kolatoli Beach Road, Kolatoli Cox's Bazar-4700.
+                        {`  Address: Kolatoli Beach Road, Kolatoli Cox's Bazar-4700.`}
                       </p>
                       <p>Front Desk no: 01898841012</p>
                       <p>Reservation no: 01321143586</p>
@@ -259,8 +259,8 @@ const Invoice = ({ params }) => {
                 ) : data?.[0]?.hotelID === 4 ? (
                   <div className="mt-8 text-black text-left">
                     <p>
-                      Address: Shopno Bilash Holiday Suites, Block # A, Plot #
-                      28, kolatoli Residential Area, Cox's Bazar
+                      {` Address: Shopno Bilash Holiday Suites, Block # A, Plot #
+                      28, kolatoli Residential Area, Cox's Bazar`}
                     </p>
                     <p>Front Desk no: 01711877621</p>
                     <p>Reservation no: 01898841013</p>
@@ -268,8 +268,8 @@ const Invoice = ({ params }) => {
                 ) : data?.[0]?.hotelID === 6 ? (
                   <div className="mt-8 text-black text-left">
                     <p>
-                      Address: Plot No-199, Block # B, Saykat Bahumukhi Samabay
-                      Samity Ltd. Lighthouse, Kolatoli, Cox's Bazar
+                      {`   Address: Plot No-199, Block # B, Saykat Bahumukhi Samabay
+                      Samity Ltd. Lighthouse, Kolatoli, Cox's Bazar`}
                     </p>
                     <p>Front Desk no: 01898841016</p>
                     <p>Reservation no: 01898841015</p>
@@ -278,8 +278,8 @@ const Invoice = ({ params }) => {
                   <div className="text-center">
                     <div className="mt-8 text-black text-left">
                       <p>
-                        Address: N.H.A building No-09, Samudra Bari, Kolatoli,
-                        Cox's Bazar
+                        {` Address: N.H.A building No-09, Samudra Bari, Kolatoli,
+                        Cox's Bazar`}
                       </p>
                       <p>Front Desk no: 01886628295</p>
                       <p>Reservation no: 01886628296</p>
