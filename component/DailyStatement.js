@@ -40,11 +40,13 @@ const DailyStatement = () => {
             acc.bkash += payment.amount || 0;
           } else if (payment.method === "BANK") {
             acc.bank += payment.amount || 0;
+          } else if (payment.method === "CASH") {
+            acc.cash += payment.amount || 0;
           }
           return acc;
         },
-        { bkash: 0, bank: 0 }
-      ) || { bkash: 0, bank: 0 }
+        { bkash: 0, bank: 0, cash: 0 }
+      ) || { bkash: 0, bank: 0, cash: 0 }
     );
   };
 
@@ -66,6 +68,7 @@ const DailyStatement = () => {
       dueAmount: (booking.totalBill || 0) - totalPaid,
       bkash: paymentTotals.bkash,
       bank: paymentTotals.bank,
+      cash: paymentTotals.cash,
     };
   };
 
@@ -142,11 +145,16 @@ const DailyStatement = () => {
 
       const totals = getCumulativeTotals(booking);
       const newTotalPaid = totals.totalPaid + dailyAmount;
-      const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
 
       if (newTotalPaid > booking.totalBill) {
         throw new Error("Total paid cannot exceed total bill");
       }
+
+      if (dailyAmount < 0) {
+        throw new Error("Daily amount cannot be negative");
+      }
+
+      const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
 
       const response = await coreAxios.put(`/booking/details/${bookingId}`, {
         totalPaid: newTotalPaid,
@@ -190,6 +198,7 @@ const DailyStatement = () => {
         dueAmount: acc.dueAmount + (totals.dueAmount || 0),
         bkash: acc.bkash + (totals.bkash || 0),
         bank: acc.bank + (totals.bank || 0),
+        cash: acc.cash + (totals.cash || 0),
       };
     },
     {
@@ -199,6 +208,7 @@ const DailyStatement = () => {
       dueAmount: 0,
       bkash: 0,
       bank: 0,
+      cash: 0,
     }
   );
 
@@ -216,6 +226,7 @@ const DailyStatement = () => {
         dueAmount: acc.dueAmount + (totals.dueAmount || 0),
         bkash: acc.bkash + (totals.bkash || 0),
         bank: acc.bank + (totals.bank || 0),
+        cash: acc.cash + (totals.cash || 0),
       };
     },
     {
@@ -225,6 +236,7 @@ const DailyStatement = () => {
       dueAmount: 0,
       bkash: 0,
       bank: 0,
+      cash: 0,
     }
   );
 
@@ -296,6 +308,9 @@ const DailyStatement = () => {
                   Bank
                 </th>
                 <th className="border border-green-600 p-2 text-center">
+                  Cash
+                </th>
+                <th className="border border-green-600 p-2 text-center">
                   Total Paid
                 </th>
                 <th className="border border-green-600 p-2 text-center">
@@ -313,14 +328,14 @@ const DailyStatement = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="15" className="text-center p-4">
+                  <td colSpan="16" className="text-center p-4">
                     <Spin tip="Loading data..." />
                   </td>
                 </tr>
               ) : bookings.regularInvoice?.length === 0 &&
                 bookings.unPaidInvoice?.length === 0 ? (
                 <tr>
-                  <td colSpan="15" className="text-center p-4">
+                  <td colSpan="16" className="text-center p-4">
                     <Alert message="No bookings found" type="info" />
                   </td>
                 </tr>
@@ -385,10 +400,13 @@ const DailyStatement = () => {
                           {booking.totalBill}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bkash || "-"}
+                          {totals.bkash || 0}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bank || "-"}
+                          {totals.bank || 0}
+                        </td>
+                        <td className="border border-green-600 p-2 text-center">
+                          {totals.cash || 0}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
@@ -401,12 +419,12 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
                             min={0}
-                            max={remainingAmount}
                             value={formik.values[booking._id]?.dailyAmount || 0}
                             onChange={(value) => {
-                              if (value > remainingAmount) {
-                                message.warning(
-                                  "Daily amount cannot exceed due amount"
+                              if (value === null || value < 0) {
+                                formik.setFieldValue(
+                                  `${booking._id}.dailyAmount`,
+                                  0
                                 );
                                 return;
                               }
@@ -420,7 +438,6 @@ const DailyStatement = () => {
                                 value;
                               setDailyIncome(newDailyIncome);
                             }}
-                            disabled={totals.dueAmount <= 0}
                             style={{ width: "80px" }}
                           />
                         </td>
@@ -433,7 +450,6 @@ const DailyStatement = () => {
                             size="small"
                             onClick={() => handleUpdate(booking._id)}
                             loading={submitting[booking._id]}
-                            disabled={totals.dueAmount <= 0}
                             style={{ backgroundColor: "#4CAF50" }}>
                             Update
                           </Button>
@@ -461,6 +477,9 @@ const DailyStatement = () => {
                           {regularTotals?.bank}
                         </td>
                         <td className="border border-green-600 p-2 text-center font-bold">
+                          {regularTotals?.cash}
+                        </td>
+                        <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.totalPaid}
                         </td>
                         <td className="border border-green-600 p-2 text-center font-bold">
@@ -474,7 +493,7 @@ const DailyStatement = () => {
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan="15" className="p-2"></td>
+                        <td colSpan="16" className="p-2"></td>
                       </tr>
                     </>
                   )}
@@ -483,7 +502,7 @@ const DailyStatement = () => {
                   {bookings.unPaidInvoice?.length > 0 && (
                     <tr style={{ backgroundColor: "#fffacd" }}>
                       <td
-                        colSpan="15"
+                        colSpan="16"
                         className="border border-green-600 p-2 text-center font-bold">
                         UNPAID INVOICES
                       </td>
@@ -544,10 +563,13 @@ const DailyStatement = () => {
                           {booking.totalBill}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bkash || "-"}
+                          {totals.bkash || 0}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bank || "-"}
+                          {totals.bank || 0}
+                        </td>
+                        <td className="border border-green-600 p-2 text-center">
+                          {totals.cash || 0}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
@@ -560,12 +582,12 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
                             min={0}
-                            max={remainingAmount}
                             value={formik.values[booking._id]?.dailyAmount || 0}
                             onChange={(value) => {
-                              if (value > remainingAmount) {
-                                message.warning(
-                                  "Daily amount cannot exceed due amount"
+                              if (value === null || value < 0) {
+                                formik.setFieldValue(
+                                  `${booking._id}.dailyAmount`,
+                                  0
                                 );
                                 return;
                               }
@@ -579,7 +601,6 @@ const DailyStatement = () => {
                                 value;
                               setDailyIncome(newDailyIncome);
                             }}
-                            disabled={totals.dueAmount <= 0}
                             style={{ width: "80px" }}
                           />
                         </td>
@@ -592,7 +613,6 @@ const DailyStatement = () => {
                             size="small"
                             onClick={() => handleUpdate(booking._id)}
                             loading={submitting[booking._id]}
-                            disabled={totals.dueAmount <= 0}
                             style={{ backgroundColor: "#4CAF50" }}>
                             Update
                           </Button>
@@ -617,6 +637,9 @@ const DailyStatement = () => {
                       </td>
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.bank}
+                      </td>
+                      <td className="border border-green-600 p-2 text-center font-bold">
+                        {unpaidTotals?.cash}
                       </td>
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.totalPaid}

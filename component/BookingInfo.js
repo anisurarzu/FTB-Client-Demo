@@ -769,12 +769,7 @@ const BookingInfo = () => {
     if (!payments || payments.length === 0) return "N/A";
 
     return payments
-      .map(
-        (payment) =>
-          `${payment.method}: ${payment.amount}${
-            payment.transactionId ? ` (${payment.transactionId})` : ""
-          }`
-      )
+      .map((payment) => `${payment.method}: ${payment.amount}`)
       .join(", ");
   };
 
