@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { InputNumber, Button, message } from "antd";
 import coreAxios from "@/utils/axiosInstance";
+import dayjs from "dayjs";
 
 const DailySummary = ({ selectedDate, dailyIncome }) => {
   const [openingBalance, setOpeningBalance] = useState(0);
@@ -10,6 +11,7 @@ const DailySummary = ({ selectedDate, dailyIncome }) => {
   const [totalBalance, setTotalBalance] = useState(0);
   const [closingBalance, setClosingBalance] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [expenseLoading, setExpenseLoading] = useState(false);
 
   // Fetch previous day's closing balance
   const fetchOpeningBalance = async () => {
@@ -28,6 +30,24 @@ const DailySummary = ({ selectedDate, dailyIncome }) => {
     }
   };
 
+  // Fetch daily expenses sum from expense API
+  const fetchDailyExpenses = async () => {
+    try {
+      setExpenseLoading(true);
+      const dateString = selectedDate.format("YYYY-MM-DD");
+      const res = await coreAxios.get(`/expenses/sum/daily?date=${dateString}`);
+
+      if (res.status === 200) {
+        setDailyExpenses(res.data.totalAmount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch daily expenses", err);
+      message.error("Failed to load daily expenses");
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
   // Calculate balances when values change
   useEffect(() => {
     const total = openingBalance + dailyIncome;
@@ -36,9 +56,12 @@ const DailySummary = ({ selectedDate, dailyIncome }) => {
     setClosingBalance(closing);
   }, [openingBalance, dailyIncome, dailyExpenses]);
 
-  // Fetch opening balance when date changes
+  // Fetch opening balance and expenses when date changes
   useEffect(() => {
-    fetchOpeningBalance();
+    if (selectedDate) {
+      fetchOpeningBalance();
+      fetchDailyExpenses();
+    }
   }, [selectedDate]);
 
   const handleSave = async () => {
@@ -102,12 +125,16 @@ const DailySummary = ({ selectedDate, dailyIncome }) => {
           <tr>
             <td className="border border-green-600 p-2">Daily Expenses</td>
             <td className="border border-green-600 p-2 text-right">
-              <InputNumber
-                min={0}
-                value={dailyExpenses}
-                onChange={(value) => setDailyExpenses(value || 0)}
-                style={{ width: "100%" }}
-              />
+              {expenseLoading ? (
+                <span>Loading...</span>
+              ) : (
+                <InputNumber
+                  min={0}
+                  value={dailyExpenses}
+                  disabled={true}
+                  style={{ width: "100%", color: "black" }}
+                />
+              )}
             </td>
           </tr>
           <tr>
