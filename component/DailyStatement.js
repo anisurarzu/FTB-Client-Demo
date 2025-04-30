@@ -38,13 +38,15 @@ const DailyStatement = () => {
         (acc, payment) => {
           if (payment.method === "BKASH") {
             acc.bkash += payment.amount || 0;
+          } else if (payment.method === "CASH") {
+            acc.cash += payment.amount || 0;
           } else if (payment.method === "BANK") {
             acc.bank += payment.amount || 0;
           }
           return acc;
         },
-        { bkash: 0, bank: 0 }
-      ) || { bkash: 0, bank: 0 }
+        { bkash: 0, cash: 0, bank: 0 }
+      ) || { bkash: 0, cash: 0, bank: 0 }
     );
   };
 
@@ -65,6 +67,7 @@ const DailyStatement = () => {
       dailyAmount: booking.dailyAmount || 0,
       dueAmount: (booking.totalBill || 0) - totalPaid,
       bkash: paymentTotals.bkash,
+      cash: paymentTotals.cash,
       bank: paymentTotals.bank,
     };
   };
@@ -162,15 +165,6 @@ const DailyStatement = () => {
         throw new Error("Daily amount cannot be negative");
       }
 
-      console.log("Payment Update Details:", {
-        currentTotalPaid,
-        currentDailyAmount,
-        newDailyAmount: dailyAmount,
-        newTotalPaid,
-        newDuePayment,
-        date: selectedDate.toISOString(),
-      });
-
       const response = await coreAxios.put(`/booking/details/${bookingId}`, {
         totalPaid: newTotalPaid,
         duePayment: newDuePayment,
@@ -217,6 +211,7 @@ const DailyStatement = () => {
         dailyAmount: acc.dailyAmount + (dateEntry?.dailyAmount || 0),
         dueAmount: acc.dueAmount + (totals.dueAmount || 0),
         bkash: acc.bkash + (totals.bkash || 0),
+        cash: acc.cash + (totals.cash || 0),
         bank: acc.bank + (totals.bank || 0),
       };
     },
@@ -226,6 +221,7 @@ const DailyStatement = () => {
       dailyAmount: 0,
       dueAmount: 0,
       bkash: 0,
+      cash: 0,
       bank: 0,
     }
   );
@@ -243,6 +239,7 @@ const DailyStatement = () => {
         dailyAmount: acc.dailyAmount + (dateEntry?.dailyAmount || 0),
         dueAmount: acc.dueAmount + (totals.dueAmount || 0),
         bkash: acc.bkash + (totals.bkash || 0),
+        cash: acc.cash + (totals.cash || 0),
         bank: acc.bank + (totals.bank || 0),
       };
     },
@@ -252,6 +249,7 @@ const DailyStatement = () => {
       dailyAmount: 0,
       dueAmount: 0,
       bkash: 0,
+      cash: 0,
       bank: 0,
     }
   );
@@ -321,6 +319,9 @@ const DailyStatement = () => {
                   Bkash
                 </th>
                 <th className="border border-green-600 p-2 text-center">
+                  Cash
+                </th>
+                <th className="border border-green-600 p-2 text-center">
                   Bank
                 </th>
                 <th className="border border-green-600 p-2 text-center">
@@ -341,14 +342,14 @@ const DailyStatement = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="15" className="text-center p-4">
+                  <td colSpan="16" className="text-center p-4">
                     <Spin tip="Loading data..." />
                   </td>
                 </tr>
               ) : bookings.regularInvoice?.length === 0 &&
                 bookings.unPaidInvoice?.length === 0 ? (
                 <tr>
-                  <td colSpan="15" className="text-center p-4">
+                  <td colSpan="16" className="text-center p-4">
                     <Alert message="No bookings found" type="info" />
                   </td>
                 </tr>
@@ -414,6 +415,9 @@ const DailyStatement = () => {
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bkash || 0}
+                        </td>
+                        <td className="border border-green-600 p-2 text-center">
+                          {totals.cash || 0}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bank || 0}
@@ -486,6 +490,9 @@ const DailyStatement = () => {
                           {regularTotals?.bkash}
                         </td>
                         <td className="border border-green-600 p-2 text-center font-bold">
+                          {regularTotals?.cash}
+                        </td>
+                        <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.bank}
                         </td>
                         <td className="border border-green-600 p-2 text-center font-bold">
@@ -502,7 +509,7 @@ const DailyStatement = () => {
                         </td>
                       </tr>
                       <tr>
-                        <td colSpan="15" className="p-2"></td>
+                        <td colSpan="16" className="p-2"></td>
                       </tr>
                     </>
                   )}
@@ -511,7 +518,7 @@ const DailyStatement = () => {
                   {bookings.unPaidInvoice?.length > 0 && (
                     <tr style={{ backgroundColor: "#fffacd" }}>
                       <td
-                        colSpan="15"
+                        colSpan="16"
                         className="border border-green-600 p-2 text-center font-bold">
                         UNPAID INVOICES
                       </td>
@@ -573,6 +580,9 @@ const DailyStatement = () => {
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bkash || 0}
+                        </td>
+                        <td className="border border-green-600 p-2 text-center">
+                          {totals.cash || 0}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bank || 0}
@@ -642,6 +652,9 @@ const DailyStatement = () => {
                       </td>
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.bkash}
+                      </td>
+                      <td className="border border-green-600 p-2 text-center font-bold">
+                        {unpaidTotals?.cash}
                       </td>
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.bank}

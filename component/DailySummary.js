@@ -125,7 +125,8 @@ const DailySummary = ({ selectedDate, dailyIncome }) => {
           <tr>
             <td className="border border-green-600 p-2">Daily Expenses</td>
             <td className="border border-green-600 p-2 text-right">
-              {expenseLoading ? (
+              {dailyExpenses}
+              {/* {expenseLoading ? (
                 <span>Loading...</span>
               ) : (
                 <InputNumber
@@ -134,7 +135,7 @@ const DailySummary = ({ selectedDate, dailyIncome }) => {
                   disabled={true}
                   style={{ width: "100%", color: "black" }}
                 />
-              )}
+              )} */}
             </td>
           </tr>
           <tr>
