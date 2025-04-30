@@ -144,7 +144,10 @@ const DailyStatement = () => {
       }
 
       const totals = getCumulativeTotals(booking);
-      const newTotalPaid = totals.totalPaid + dailyAmount;
+
+      // Subtract the previous day's amount (if any) before adding the new one
+      const previousDailyAmount = booking.dailyAmount || 0;
+      const newTotalPaid = totals.totalPaid - previousDailyAmount + dailyAmount;
 
       if (newTotalPaid > booking.totalBill) {
         throw new Error("Total paid cannot exceed total bill");
@@ -155,6 +158,13 @@ const DailyStatement = () => {
       }
 
       const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
+
+      console.log("------", {
+        totalPaid: newTotalPaid,
+        duePayment: newDuePayment,
+        dailyAmount: dailyAmount,
+        searchDate: selectedDate.toISOString(),
+      });
 
       const response = await coreAxios.put(`/booking/details/${bookingId}`, {
         totalPaid: newTotalPaid,
@@ -173,44 +183,78 @@ const DailyStatement = () => {
       setSubmitting((prev) => ({ ...prev, [bookingId]: false }));
     }
   };
+  // const handleUpdate = async (bookingId) => {
+  //   setSubmitting((prev) => ({ ...prev, [bookingId]: true }));
+  //   try {
+  //     const dailyAmount = Number(formik.values[bookingId]?.dailyAmount) || 0;
+  //     const booking = [
+  //       ...bookings.regularInvoice,
+  //       ...bookings.unPaidInvoice,
+  //     ].find((b) => b._id === bookingId);
 
-  useEffect(() => {
-    fetchBookingsByDate(selectedDate);
-  }, [selectedDate]);
+  //     if (!booking) {
+  //       throw new Error("Booking not found");
+  //     }
 
-  const handleDateChange = (date) => setSelectedDate(date);
-  const handlePreviousDay = () =>
-    setSelectedDate((prev) => prev.subtract(1, "day"));
-  const handleNextDay = () => setSelectedDate((prev) => prev.add(1, "day"));
+  //     // Get existing payment for the selected date if any
+  //     const existingPayment = booking.invoiceDetails?.find((payment) =>
+  //       dayjs(payment.date).isSame(selectedDate, "day")
+  //     );
 
-  // Calculate totals
-  const regularTotals = bookings.regularInvoice?.reduce(
-    (acc, booking) => {
-      const totals = getCumulativeTotals(booking);
-      const dateEntry = booking.invoiceDetails?.find((entry) =>
-        isSameDay(new Date(entry.date), selectedDate.toDate())
-      );
+  //     // Calculate base total paid (excluding the payment we're updating)
+  //     const baseTotalPaid = (booking.invoiceDetails || []).reduce(
+  //       (sum, payment) => {
+  //         if (!dayjs(payment.date).isSame(selectedDate, "day")) {
+  //           return sum + (Number(payment.dailyAmount) || 0);
+  //         }
+  //         return sum;
+  //       },
+  //       0
+  //     );
 
-      return {
-        totalBill: acc.totalBill + (booking.totalBill || 0),
-        totalPaid: acc.totalPaid + (totals.totalPaid || 0),
-        dailyAmount: acc.dailyAmount + (dateEntry?.dailyAmount || 0),
-        dueAmount: acc.dueAmount + (totals.dueAmount || 0),
-        bkash: acc.bkash + (totals.bkash || 0),
-        bank: acc.bank + (totals.bank || 0),
-        cash: acc.cash + (totals.cash || 0),
-      };
-    },
-    {
-      totalBill: 0,
-      totalPaid: 0,
-      dailyAmount: 0,
-      dueAmount: 0,
-      bkash: 0,
-      bank: 0,
-      cash: 0,
-    }
-  );
+  //     // Calculate new totals
+  //     const newTotalPaid = baseTotalPaid + dailyAmount;
+  //     const newDuePayment = (booking.totalBill || 0) - newTotalPaid;
+
+  //     // Validations
+  //     if (newTotalPaid > booking.totalBill) {
+  //       throw new Error("Total paid cannot exceed total bill");
+  //     }
+  //     if (dailyAmount < 0) {
+  //       throw new Error("Daily amount cannot be negative");
+  //     }
+
+  //     console.log("Payment Update Details:", {
+  //       existingPayment: existingPayment?.dailyAmount,
+  //       newDailyAmount: dailyAmount,
+  //       previousTotalPaid: booking.totalPaid,
+  //       newTotalPaid,
+  //       newDuePayment,
+  //       date: selectedDate.toISOString(),
+  //     });
+
+  //     const response = await coreAxios.put(`/booking/details/${bookingId}`, {
+  //       totalPaid: newTotalPaid,
+  //       duePayment: newDuePayment,
+  //       dailyAmount: dailyAmount,
+  //       searchDate: selectedDate.toISOString(),
+  //       isUpdate: !!existingPayment,
+  //     });
+
+  //     if (response.status === 200) {
+  //       message.success(
+  //         existingPayment
+  //           ? "Payment updated successfully"
+  //           : "Payment added successfully"
+  //       );
+  //       await fetchBookingsByDate(selectedDate);
+  //     }
+  //   } catch (error) {
+  //     message.error(error.message || "Failed to update payment");
+  //   } finally {
+  //     setSubmitting((prev) => ({ ...prev, [bookingId]: false }));
+  //   }
+  // };
 
   const unpaidTotals = bookings.unPaidInvoice?.reduce(
     (acc, booking) => {
@@ -400,13 +444,13 @@ const DailyStatement = () => {
                           {booking.totalBill}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bkash || 0}
+                          {totals.bkash || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bank || 0}
+                          {totals.bank || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.cash || 0}
+                          {totals.cash || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
@@ -563,13 +607,13 @@ const DailyStatement = () => {
                           {booking.totalBill}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bkash || 0}
+                          {totals.bkash || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.bank || 0}
+                          {totals.bank || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
-                          {totals.cash || 0}
+                          {totals.cash || "-"}
                         </td>
                         <td className="border border-green-600 p-2 text-center">
                           <InputNumber
