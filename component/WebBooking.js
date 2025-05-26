@@ -32,7 +32,7 @@ const WebBooking = () => {
 
   const fetchWebBookingInfo = async () => {
     try {
-      const response = await coreAxios.get("user-bookings");
+      const response = await coreAxios.get("/web/bookings");
       if (response.status === 200) {
         setWebBookingInfo(response.data);
         setFilteredBookings(response.data);
