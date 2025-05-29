@@ -29,6 +29,8 @@ import WebBooking from "@/component/WebBooking";
 import DailyStatement from "@/component/DailyStatement";
 import Expense from "@/component/Expense";
 import ExpenseInfo from "@/component/Expense/ExpenseInfo";
+import WebHotelsPage from "@/component/WebHotel/WebHotelsPage";
+import WebHotelDetailsPage from "@/component/WebHotel/WebHotelDetailsPage";
 
 const { Header, Sider, Content } = Layout;
 
@@ -83,18 +85,18 @@ const rolePermissions = {
       icon: <InfoCircleOutlined />,
       component: <ExpenseInfo />,
     },
-    // {
-    //   key: "3",
-    //   label: "Flat/Room Type",
-    //   icon: <ApartmentOutlined />,
-    //   component: <HotelCategory />,
-    // },
-    // {
-    //   key: "4",
-    //   label: "Flat/Room No",
-    //   icon: <UnorderedListOutlined />,
-    //   component: <HotelRoom />,
-    // },
+    {
+      key: "3",
+      label: "Web Hotels",
+      icon: <ApartmentOutlined />,
+      component: <WebHotelsPage />,
+    },
+    {
+      key: "4",
+      label: "Web Hotel Details",
+      icon: <UnorderedListOutlined />,
+      component: <WebHotelDetailsPage />,
+    },
     {
       key: "5",
       label: "Hotel Info",

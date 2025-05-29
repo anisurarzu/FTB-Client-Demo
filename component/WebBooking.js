@@ -5,42 +5,44 @@ import {
   Button,
   message,
   Popconfirm,
-  Spin,
   Input,
   Tooltip,
-  Select,
   Pagination,
-  Alert,
+  DatePicker,
+  Skeleton,
+  Modal,
+  Select,
+  Form,
 } from "antd";
-
-import dayjs from "dayjs";
-import moment from "moment";
-import { CopyToClipboard } from "react-copy-to-clipboard";
+import { ReloadOutlined, CopyOutlined } from "@ant-design/icons";
 import coreAxios from "@/utils/axiosInstance";
-import { CopyOutlined } from "@ant-design/icons";
-import Link from "next/link"; // For routing
+import { CopyToClipboard } from "react-copy-to-clipboard";
+import Link from "next/link";
+import dayjs from "dayjs";
 
 const WebBooking = () => {
   const [webBookingInfo, setWebBookingInfo] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filteredBookings, setFilteredBookings] = useState([]);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-  });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [searchText, setSearchText] = useState("");
+  const [filterDate, setFilterDate] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState(null);
+  const [form] = Form.useForm();
 
   const fetchWebBookingInfo = async () => {
+    setLoading(true);
     try {
       const response = await coreAxios.get("/web/bookings");
       if (response.status === 200) {
         setWebBookingInfo(response.data);
         setFilteredBookings(response.data);
-      } else {
-        // or handle appropriately
       }
     } catch (error) {
-      message.error("Failed to fetch room categories.");
+      message.error("Failed to fetch bookings.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,258 +53,286 @@ const WebBooking = () => {
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearchText(value);
-    const filteredData = bookings.filter(
-      (r) =>
-        r.bookingNo.toLowerCase().includes(value) ||
-        r.bookedByID.toLowerCase().includes(value) ||
-        r.fullName.toLowerCase().includes(value) ||
-        r.roomCategoryName.toLowerCase().includes(value) ||
-        r.roomNumberName.toLowerCase().includes(value) ||
-        r.hotelName.toLowerCase().includes(value) ||
-        r.phone.toLowerCase().includes(value)
+    const filtered = webBookingInfo.filter((booking) =>
+      [booking.bookingNo, booking.bookedByID, booking.fullName, booking.roomCategoryName, booking.roomNumberName, booking.hotelName, booking.phone]
+        .some((field) => field?.toLowerCase().includes(value))
     );
-    setFilteredBookings(filteredData);
-    setPagination({ ...pagination, current: 1 }); // Reset to page 1 after filtering
+    setFilteredBookings(filtered);
+    setPagination({ ...pagination, current: 1 });
   };
 
-  // Paginate the filtered data
+  const handleDateFilter = (date) => {
+    setFilterDate(date);
+    if (!date) {
+      setFilteredBookings(webBookingInfo);
+      return;
+    }
+    const filtered = webBookingInfo.filter((booking) =>
+      dayjs(booking.createdAt).isSame(date, "day")
+    );
+    setFilteredBookings(filtered);
+    setPagination({ ...pagination, current: 1 });
+  };
+
+  const handleDelete = (booking) => {
+    message.success(`Booking ${booking.bookingNo} cancelled.`);
+  };
+
+  const showStatusModal = (booking) => {
+    setCurrentBooking(booking);
+    form.setFieldsValue({
+      status: booking.statusID === 1 ? 'pending' : 
+             booking.statusID === 2 ? 'confirmed' : 
+             booking.statusID === 255 ? 'cancel' : 'pending'
+    });
+    setIsModalVisible(true);
+  };
+
+  const handleStatusUpdate = async () => {
+    try {
+      const values = await form.validateFields();
+      const { status, reason } = values;
+      
+      const payload = { status };
+      if (status === 'cancel') {
+        payload.canceledBy = 'admin'; // You might want to get this from auth context
+        payload.reason = reason;
+      }
+
+      const response = await coreAxios.put(
+        `/web/booking/status/${currentBooking._id}`,
+        payload
+      );
+
+      if (response.status === 200) {
+        message.success('Booking status updated successfully');
+        fetchWebBookingInfo();
+        setIsModalVisible(false);
+      }
+    } catch (error) {
+      message.error(error.response?.data?.error || 'Failed to update booking status');
+    }
+  };
+
   const paginatedBookings = filteredBookings.slice(
     (pagination.current - 1) * pagination.pageSize,
     pagination.current * pagination.pageSize
   );
 
+  const skeletonRows = Array(pagination.pageSize)
+    .fill(0)
+    .map((_, idx) => (
+      <tr key={idx} style={{ background: "linear-gradient(to right, #e0f7fa, #e3f2fd)" }}>
+        {Array(13)
+          .fill(0)
+          .map((_, colIdx) => (
+            <td key={colIdx} style={{ padding: 8 }}>
+              <Skeleton.Input active size="small" block />
+            </td>
+          ))}
+      </tr>
+    ));
+
   return (
-    <div>
-      {loading ? (
-        <Spin tip="Loading...">
-          <Alert
-            message="Alert message title"
-            description="Further details about the context of this alert."
-            type="info"
-          />
-        </Spin>
-      ) : (
-        <div className="">
-          <div className="flex justify-between">
-            {/* Global Search Input */}
-            <Input
-              placeholder="Search bookings..."
-              value={searchText}
-              onChange={handleSearch}
-              style={{ width: 300, marginBottom: 20 }}
-            />
-          </div>
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <Input
+          placeholder="Search bookings..."
+          value={searchText}
+          onChange={handleSearch}
+          style={{ width: 200 }}
+          allowClear
+        />
+        <DatePicker
+          value={filterDate}
+          onChange={handleDateFilter}
+          format="YYYY-MM-DD"
+          placeholder="Filter by date"
+          allowClear
+        />
+        <Button icon={<ReloadOutlined />} onClick={fetchWebBookingInfo}>
+          Refresh
+        </Button>
+      </div>
 
-          <div className="relative overflow-x-auto shadow-md">
-            <div style={{ overflowX: "auto" }}>
-              <table className="w-full text-xs text-left rtl:text-right  dark:text-gray-400">
-                {/* Table Header */}
-                <thead className="text-xs  uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                  <tr>
-                    <th className="border border-tableBorder text-center p-2">
-                      Booking No.
-                    </th>
-
-                    <th className="border border-tableBorder text-center p-2">
-                      Guest Name
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Phone
-                    </th>
-                    {/* <th className="border border-tableBorder text-center p-2">
-                      Hotel
-                    </th> */}
-                    <th className="border border-tableBorder text-center p-2">
-                      Flat Type
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Flat No/Unit
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Booking Date
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Check In
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Check Out
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Nights
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Advance
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Total
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Status
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Confirm/Cancel By
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Updated By
-                    </th>
-                    <th className="border border-tableBorder text-center p-2">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-
-                {/* Table Body */}
-                <tbody>
-                  {paginatedBookings?.map((booking, idx) => (
-                    <tr
-                      key={booking._id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                      style={{
-                        backgroundColor:
-                          booking.statusID === 255
-                            ? "rgba(255, 99, 99, 0.5)"
-                            : "",
-                      }}>
-                      {/* Booking No with Link and Copy Feature */}
-
-                      <td className="border border-tableBorder text-center p-2">
-                        <span
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}>
-                          <Link
-                            target="_blank"
-                            href={`/dashboard/${booking.bookingNo}`}
-                            passHref>
-                            <p
-                              style={{
-                                color: "#1890ff",
-                                cursor: "pointer",
-                                marginRight: 8,
-                              }}>
-                              {booking.bookingNo}
-                            </p>
-                          </Link>
-                          <Tooltip title="Click to copy">
-                            <CopyToClipboard
-                              text={booking.bookingNo}
-                              onCopy={() => message.success("Copied!")}>
-                              <CopyOutlined
-                                style={{ cursor: "pointer", color: "#1890ff" }}
-                              />
-                            </CopyToClipboard>
-                          </Tooltip>
-                        </span>
-                      </td>
-                      {/* Booked By */}
-                      {/* Guest Name */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking.userName}
-                      </td>
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking.userPhone}
-                      </td>
-                      {/* Hotel Name */}
-                      {/* <td className="border border-tableBorder text-center p-2">
-                        {booking.hotelName}
-                      </td> */}
-                      {/* Flat Type */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking.roomCategory}
-                      </td>
-                      {/* Flat No/Unit */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking.roomName}
-                      </td>
-                      {/* Check In */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {moment(booking.createTime).format("D MMM YYYY")}
-                      </td>
-                      {/* Check In */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {moment(booking.checkInDate).format("D MMM YYYY")}
-                      </td>
-                      {/* Check Out */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {moment(booking.checkOutDate).format("D MMM YYYY")}
-                      </td>
-                      {/* Nights */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking.noOfNights}
-                      </td>
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking.advancePayment}
-                      </td>
-                      {/* Total Bill */}
-                      <td className="border border-tableBorder text-center p-2 font-bold text-green-900">
-                        {booking.totalBill}
-                      </td>
-                      {/* Booking Status */}
-                      <td
-                        className="border border-tableBorder text-center p-2 font-bold"
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead style={{ backgroundColor: "#e3f2fd", color: "#333" }}>
+            <tr>
+              {[
+                "Booking No.",
+                "Guest",
+                "Phone",
+                "Type",
+                "Unit",
+                "Booked",
+                "Check In",
+                "Check Out",
+                "Nights",
+                "Adv.",
+                "Total",
+                "Status",
+                "Actions",
+              ].map((header) => (
+                <th key={header} style={{ padding: 8, textAlign: "center" }}>
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading
+              ? skeletonRows
+              : paginatedBookings.map((booking, i) => (
+                  <tr
+                    key={booking._id}
+                    style={{
+                      background: booking.statusID === 255 
+                        ? '#fee2e2' 
+                        : i % 2 === 0
+                          ? "linear-gradient(to right, #f0fdf4, #e0f2f1)"
+                          : "linear-gradient(to right, #e8f5e9, #f1f8e9)",
+                    }}
+                  >
+                    <td style={{ padding: 8, textAlign: "center" }}>
+                      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
+                        <Link href={`/dashboard/${booking.bookingNo}`}>
+                          <span style={{ color: "#1890ff", cursor: "pointer" }}>
+                            {booking.bookingNo}
+                          </span>
+                        </Link>
+                        <CopyToClipboard text={booking.bookingNo} onCopy={() => message.success("Copied!")}>
+                          <CopyOutlined style={{ color: "#1890ff", cursor: "pointer" }} />
+                        </CopyToClipboard>
+                      </div>
+                    </td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{booking.fullName}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{booking.phone}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{booking.roomCategoryName}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{booking.roomNumberName}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{dayjs(booking.createTime).format("MMM D")}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{dayjs(booking.checkInDate).format("MMM D")}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{dayjs(booking.checkOutDate).format("MMM D")}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{booking.nights}</td>
+                    <td style={{ padding: 8, textAlign: "center" }}>{booking.advancePayment}</td>
+                    <td style={{ padding: 8, textAlign: "center", fontWeight: "bold", color: "#0d9488" }}>
+                      {booking.totalBill}
+                    </td>
+                    <td style={{ padding: 8, textAlign: "center" }}>
+                      <span
                         style={{
-                          color: booking.statusID === 255 ? "red" : "green", // Inline style for text color
-                        }}>
-                        {booking.statusID === 255 ? (
-                          <p>Canceled</p>
-                        ) : (
-                          "Confirmed"
-                        )}
-                      </td>
-                      <td className="border border-tableBorder text-center p-2 font-bold text-green-900">
-                        {booking?.statusID === 255
-                          ? booking?.canceledBy
-                          : booking?.createdBy}
-                      </td>
-                      <td className="border  border-tableBorder text-center   text-blue-900">
-                        {booking?.updatedByID}{" "}
-                        {booking?.updatedByID &&
-                          dayjs(booking?.updatedAt).format(
-                            "D MMM, YYYY (h:mm a)"
-                          )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="border border-tableBorder text-center p-2">
-                        {booking?.statusID === 1 && (
-                          <div className="flex">
-                            <Button onClick={() => handleEdit(booking)}>
-                              Edit
+                          padding: "2px 6px",
+                          borderRadius: 12,
+                          backgroundColor: booking.statusID === 255 
+                            ? "#fee2e2" 
+                            : booking.statusID === 2 
+                              ? "#dcfce7" 
+                              : "#fef9c3",
+                          color: booking.statusID === 255 
+                            ? "#b91c1c" 
+                            : booking.statusID === 2 
+                              ? "#15803d" 
+                              : "#a16207",
+                          fontSize: 11,
+                        }}
+                      >
+                        {booking.statusID === 255 
+                          ? "Canceled" 
+                          : booking.statusID === 2 
+                            ? "Confirmed" 
+                            : "Pending"}
+                      </span>
+                    </td>
+                    <td style={{ padding: 8, textAlign: "center" }}>
+                      <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                        <Button 
+                          size="small" 
+                          style={{ fontSize: 11 }}
+                          onClick={() => showStatusModal(booking)}
+                        >
+                          Update Status
+                        </Button>
+                        {/* {booking.statusID === 1 && (
+                          <Popconfirm
+                            title="Cancel this booking?"
+                            onConfirm={() => handleDelete(booking)}
+                          >
+                            <Button size="small" type="text" danger style={{ fontSize: 11 }}>
+                              Cancel
                             </Button>
-                            <Popconfirm
-                              title="Are you sure to delete this booking?"
-                              onConfirm={() => handleDelete(booking)}>
-                              <Button type="link" danger>
-                                Cancel
-                              </Button>
-                            </Popconfirm>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </Popconfirm>
+                        )} */}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+          </tbody>
+        </table>
+      </div>
 
-            {/* Pagination (commented out) */}
+      {/* Status Update Modal */}
+      <Modal
+        title="Update Booking Status"
+        visible={isModalVisible}
+        onOk={handleStatusUpdate}
+        onCancel={() => setIsModalVisible(false)}
+        okText="Update"
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="status"
+            label="Status"
+            rules={[{ required: true, message: 'Please select a status' }]}
+          >
+            <Select>
+              <Select.Option value="pending">Pending</Select.Option>
+              <Select.Option value="confirmed">Confirmed</Select.Option>
+              <Select.Option value="cancel">Cancel</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.status !== currentValues.status}
+          >
+            {({ getFieldValue }) => {
+              return getFieldValue('status') === 'cancel' ? (
+                <Form.Item
+                  name="reason"
+                  label="Reason for cancellation"
+                  rules={[{ required: true, message: 'Please provide a reason' }]}
+                >
+                  <Input.TextArea rows={3} placeholder="Enter reason for cancellation" />
+                </Form.Item>
+              ) : null;
+            }}
+          </Form.Item>
+        </Form>
+      </Modal>
 
-            <div className="flex justify-center p-2">
-              <Pagination
-                current={pagination.current}
-                pageSize={pagination.pageSize}
-                total={filteredBookings?.length}
-                onChange={(page, pageSize) =>
-                  setPagination({ current: page, pageSize })
-                } // Update both current page and pageSize
-                className="mt-4"
-              />
-            </div>
-          </div>
+      {/* Pagination Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontSize: 12,
+          marginTop: 12,
+        }}
+      >
+        <div>
+          Showing {((pagination.current - 1) * pagination.pageSize) + 1} to{" "}
+          {Math.min(pagination.current * pagination.pageSize, filteredBookings.length)} of{" "}
+          {filteredBookings.length} entries
         </div>
-      )}
+        <Pagination
+          size="small"
+          current={pagination.current}
+          pageSize={pagination.pageSize}
+          total={filteredBookings.length}
+          onChange={(page) => setPagination({ ...pagination, current: page })}
+          showSizeChanger={false}
+        />
+      </div>
     </div>
   );
 };
