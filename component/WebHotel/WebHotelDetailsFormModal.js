@@ -25,6 +25,29 @@ import coreAxios from "@/utils/axiosInstance";
 const { Option } = Select;
 const { TabPane } = Tabs;
 
+const amenityOptions = [
+  'Ceiling Fan',
+  'Air Conditioning',
+  'Toiletries',
+  'Wi-Fi',
+  'Sea View',
+  'Beach View',
+  'TV',
+  'Minibar',
+  'Safe',
+  'Balcony',
+  'Private Pool',
+  'Bathtub',
+  'Shower',
+  'Hair Dryer',
+  'Desk',
+  'Sofa',
+  'Telephone',
+  'Coffee Maker',
+  'Iron',
+  'Kitchenette'
+];
+
 const WebHotelDetailsFormModal = ({
   visible,
   onCancel,
@@ -141,6 +164,12 @@ const WebHotelDetailsFormModal = ({
     setHotelImages(fileList);
   };
 
+  const handleRoomImagesChange = (name, { fileList }) => {
+    const roomTypes = form.getFieldValue('roomTypes') || [];
+    roomTypes[name].roomImages = fileList;
+    form.setFieldsValue({ roomTypes });
+  };
+
   const handleOk = async () => {
     try {
       await form.validateFields();
@@ -157,6 +186,8 @@ const WebHotelDetailsFormModal = ({
           .filter(url => url),
         roomTypes: (values.roomTypes || []).map(roomType => ({
           ...roomType,
+          amenities: roomType.amenities || [],
+          roomImages: (roomType.roomImages || []).map(file => file.response?.url || file.url).filter(url => url),
           options: (roomType.options || []).map(option => ({
             ...option,
             adults: Number(option.adults) || 1,
@@ -302,177 +333,210 @@ const WebHotelDetailsFormModal = ({
             <Form.List name="roomTypes">
               {(fields, { add, remove }) => (
                 <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Card
-                      key={key}
-                      size="small"
-                      title={`Room Type ${name + 1}`}
-                      style={{ marginBottom: 16 }}
-                      extra={
-                        <Button
-                          danger
-                          type="text"
-                          size="small"
-                          icon={<MinusCircleOutlined />}
-                          onClick={() => remove(name)}
-                        />
-                      }
-                    >
-                      <Row gutter={16}>
-                        <Col span={12}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'name']}
-                            label="Room Type Name"
-                            rules={[{ required: true, message: 'Please enter room type name' }]}
-                          >
-                            <Input />
-                          </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'amenities']}
-                            label="Amenities"
-                          >
-                            <Select mode="tags" placeholder="Add amenities" />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'description']}
-                        label="Description"
+                  {fields.map(({ key, name, ...restField }) => {
+                    const roomType = form.getFieldValue(['roomTypes', name]) || {};
+                    const roomImages = roomType.roomImages || [];
+                    
+                    return (
+                      <Card
+                        key={key}
+                        size="small"
+                        title={`Room Type ${name + 1}`}
+                        style={{ marginBottom: 16 }}
+                        extra={
+                          <Button
+                            danger
+                            type="text"
+                            size="small"
+                            icon={<MinusCircleOutlined />}
+                            onClick={() => remove(name)}
+                          />
+                        }
                       >
-                        <Input.TextArea rows={3} />
-                      </Form.Item>
-
-                      <Divider orientation="left">Room Options</Divider>
-                      
-                      <Form.List name={[name, 'options']}>
-                        {(optionFields, { add: addOption, remove: removeOption }) => (
-                          <>
-                            {optionFields.map(({ key: optionKey, name: optionName, ...optionRestField }) => (
-                              <div key={optionKey} style={{ marginBottom: 16 }}>
-                                <Row gutter={16} align="middle">
-                                  <Col span={18}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'type']}
-                                      label="Option Type"
-                                      rules={[{ required: true, message: 'Please enter option type' }]}
-                                    >
-                                      <Input />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={6} style={{ textAlign: 'right' }}>
-                                    <Button
-                                      danger
-                                      type="text"
-                                      size="small"
-                                      icon={<MinusCircleOutlined />}
-                                      onClick={() => removeOption(optionName)}
-                                    />
-                                  </Col>
-                                </Row>
-                                
-                                <Row gutter={16}>
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'adults']}
-                                      label="Adults"
-                                      rules={[{ required: true, message: 'Please enter adults count' }]}
-                                    >
-                                      <InputNumber min={1} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'price']}
-                                      label="Price"
-                                      rules={[{ required: true, message: 'Please enter price' }]}
-                                    >
-                                      <InputNumber min={0} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'breakfast']}
-                                      label="Breakfast Included"
-                                      valuePropName="checked"
-                                    >
-                                      <Switch />
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
-                                
-                                <Row gutter={16}>
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'originalPrice']}
-                                      label="Original Price"
-                                    >
-                                      <InputNumber min={0} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'discountPercent']}
-                                      label="Discount %"
-                                    >
-                                      <InputNumber min={0} max={100} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...optionRestField}
-                                      name={[optionName, 'taxes']}
-                                      label="Taxes"
-                                    >
-                                      <InputNumber min={0} style={{ width: '100%' }} />
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
-                                
-                                <Form.Item
-                                  {...optionRestField}
-                                  name={[optionName, 'cancellation']}
-                                  label="Cancellation Policy"
-                                >
-                                  <Input.TextArea rows={2} />
-                                </Form.Item>
-                              </div>
-                            ))}
-                            
-                            <Button
-                              type="dashed"
-                              onClick={() => addOption({
-                                type: 'Standard',
-                                adults: 2,
-                                price: 0,
-                                originalPrice: 0,
-                                discountPercent: 0,
-                                taxes: 0,
-                                breakfast: false,
-                                cancellation: 'Non-refundable'
-                              })}
-                              icon={<PlusOutlined />}
-                              block
-                              size="small"
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'name']}
+                              label="Room Type Name"
+                              rules={[{ required: true, message: 'Please enter room type name' }]}
                             >
-                              Add Room Option
-                            </Button>
-                          </>
-                        )}
-                      </Form.List>
-                    </Card>
-                  ))}
+                              <Input />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'amenities']}
+                              label="Amenities"
+                            >
+                              <Select 
+                                mode="multiple"
+                                placeholder="Select amenities"
+                                options={amenityOptions.map(amenity => ({
+                                  value: amenity,
+                                  label: amenity
+                                }))}
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'description']}
+                          label="Description"
+                        >
+                          <Input.TextArea rows={3} />
+                        </Form.Item>
+
+                        <Form.Item label="Room Images">
+                          <Upload
+                            customRequest={handleImageUpload}
+                            listType="picture-card"
+                            fileList={roomImages}
+                            onPreview={handlePreview}
+                            onChange={(info) => handleRoomImagesChange(name, info)}
+                            beforeUpload={beforeUpload}
+                            multiple
+                            accept="image/*"
+                            maxCount={3}
+                          >
+                            {roomImages.length >= 3 ? null : (
+                              <div>
+                                <PlusOutlined />
+                                <div style={{ marginTop: 8 }}>Upload</div>
+                              </div>
+                            )}
+                          </Upload>
+                        </Form.Item>
+
+                        <Divider orientation="left">Room Options</Divider>
+                        
+                        <Form.List name={[name, 'options']}>
+                          {(optionFields, { add: addOption, remove: removeOption }) => (
+                            <>
+                              {optionFields.map(({ key: optionKey, name: optionName, ...optionRestField }) => (
+                                <div key={optionKey} style={{ marginBottom: 16 }}>
+                                  <Row gutter={16} align="middle">
+                                    <Col span={18}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'type']}
+                                        label="Option Type"
+                                        rules={[{ required: true, message: 'Please enter option type' }]}
+                                      >
+                                        <Input />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={6} style={{ textAlign: 'right' }}>
+                                      <Button
+                                        danger
+                                        type="text"
+                                        size="small"
+                                        icon={<MinusCircleOutlined />}
+                                        onClick={() => removeOption(optionName)}
+                                      />
+                                    </Col>
+                                  </Row>
+                                  
+                                  <Row gutter={16}>
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'adults']}
+                                        label="Adults"
+                                        rules={[{ required: true, message: 'Please enter adults count' }]}
+                                      >
+                                        <InputNumber min={1} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'price']}
+                                        label="Price"
+                                        rules={[{ required: true, message: 'Please enter price' }]}
+                                      >
+                                        <InputNumber min={0} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'breakfast']}
+                                        label="Breakfast Included"
+                                        valuePropName="checked"
+                                      >
+                                        <Switch />
+                                      </Form.Item>
+                                    </Col>
+                                  </Row>
+                                  
+                                  <Row gutter={16}>
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'originalPrice']}
+                                        label="Original Price"
+                                      >
+                                        <InputNumber min={0} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'discountPercent']}
+                                        label="Discount %"
+                                      >
+                                        <InputNumber min={0} max={100} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...optionRestField}
+                                        name={[optionName, 'taxes']}
+                                        label="Taxes"
+                                      >
+                                        <InputNumber min={0} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+                                  </Row>
+                                  
+                                  <Form.Item
+                                    {...optionRestField}
+                                    name={[optionName, 'cancellation']}
+                                    label="Cancellation Policy"
+                                  >
+                                    <Input.TextArea rows={2} />
+                                  </Form.Item>
+                                </div>
+                              ))}
+                              
+                              <Button
+                                type="dashed"
+                                onClick={() => addOption({
+                                  type: 'Standard',
+                                  adults: 2,
+                                  price: 0,
+                                  originalPrice: 0,
+                                  discountPercent: 0,
+                                  taxes: 0,
+                                  breakfast: false,
+                                  cancellation: 'Non-refundable'
+                                })}
+                                icon={<PlusOutlined />}
+                                block
+                                size="small"
+                              >
+                                Add Room Option
+                              </Button>
+                            </>
+                          )}
+                        </Form.List>
+                      </Card>
+                    );
+                  })}
                   
                   <Button
                     type="dashed"
@@ -480,6 +544,7 @@ const WebHotelDetailsFormModal = ({
                       name: '',
                       amenities: [],
                       description: '',
+                      roomImages: [],
                       options: [{
                         type: 'Standard',
                         adults: 2,
