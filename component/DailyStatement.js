@@ -262,7 +262,8 @@ const DailyStatement = () => {
           <Button
             type="primary"
             onClick={handlePreviousDay}
-            style={{ backgroundColor: "#4CAF50" }}>
+            style={{ backgroundColor: "#4CAF50" }}
+          >
             Previous Day
           </Button>
           <DatePicker
@@ -275,7 +276,8 @@ const DailyStatement = () => {
           <Button
             type="primary"
             onClick={handleNextDay}
-            style={{ backgroundColor: "#4CAF50" }}>
+            style={{ backgroundColor: "#4CAF50" }}
+          >
             Next Day
           </Button>
         </div>
@@ -286,7 +288,8 @@ const DailyStatement = () => {
           <table className="w-full text-xs">
             <thead
               className="text-xs uppercase"
-              style={{ backgroundColor: "#4CAF50", color: "white" }}>
+              style={{ backgroundColor: "#4CAF50", color: "white" }}
+            >
               <tr>
                 <th className="border border-green-600 p-2 text-center">
                   Sl No.
@@ -318,9 +321,9 @@ const DailyStatement = () => {
                 <th className="border border-green-600 p-2 text-center">
                   Bkash
                 </th>
-                <th className="border border-green-600 p-2 text-center">
+                {/* <th className="border border-green-600 p-2 text-center">
                   Cash
-                </th>
+                </th> */}
                 <th className="border border-green-600 p-2 text-center">
                   Bank
                 </th>
@@ -370,7 +373,8 @@ const DailyStatement = () => {
                             booking.statusID === 255
                               ? "rgba(255, 99, 99, 0.5)"
                               : "",
-                        }}>
+                        }}
+                      >
                         <td className="border border-green-600 p-2 text-center">
                           {index + 1}
                         </td>
@@ -381,7 +385,8 @@ const DailyStatement = () => {
                           <div className="flex items-center justify-center">
                             <Link
                               href={`/dashboard/${booking.bookingNo}`}
-                              passHref>
+                              passHref
+                            >
                               <span className="text-blue-500 cursor-pointer mr-2">
                                 {booking.bookingNo}
                               </span>
@@ -389,7 +394,8 @@ const DailyStatement = () => {
                             <Tooltip title="Copy">
                               <CopyToClipboard
                                 text={booking.bookingNo}
-                                onCopy={() => message.success("Copied!")}>
+                                onCopy={() => message.success("Copied!")}
+                              >
                                 <CopyOutlined className="cursor-pointer text-blue-500" />
                               </CopyToClipboard>
                             </Tooltip>
@@ -416,9 +422,9 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bkash || 0}
                         </td>
-                        <td className="border border-green-600 p-2 text-center">
+                        {/* <td className="border border-green-600 p-2 text-center">
                           {totals.cash || 0}
-                        </td>
+                        </td> */}
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bank || 0}
                         </td>
@@ -466,7 +472,8 @@ const DailyStatement = () => {
                             onClick={() => handleUpdate(booking._id)}
                             loading={submitting[booking._id]}
                             disabled={totals.dueAmount <= 0}
-                            style={{ backgroundColor: "#4CAF50" }}>
+                            style={{ backgroundColor: "#4CAF50" }}
+                          >
                             Update
                           </Button>
                         </td>
@@ -480,7 +487,8 @@ const DailyStatement = () => {
                       <tr style={{ backgroundColor: "#f0f0f0" }}>
                         <td
                           colSpan="8"
-                          className="border border-green-600 p-2 text-right font-bold">
+                          className="border border-green-600 p-2 text-right font-bold"
+                        >
                           Regular Invoices Total:
                         </td>
                         <td className="border border-green-600 p-2 text-center font-bold">
@@ -489,9 +497,9 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.bkash}
                         </td>
-                        <td className="border border-green-600 p-2 text-center font-bold">
+                        {/* <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.cash}
-                        </td>
+                        </td> */}
                         <td className="border border-green-600 p-2 text-center font-bold">
                           {regularTotals?.bank}
                         </td>
@@ -519,7 +527,8 @@ const DailyStatement = () => {
                     <tr style={{ backgroundColor: "#fffacd" }}>
                       <td
                         colSpan="16"
-                        className="border border-green-600 p-2 text-center font-bold">
+                        className="border border-green-600 p-2 text-center font-bold"
+                      >
                         UNPAID INVOICES
                       </td>
                     </tr>
@@ -535,7 +544,8 @@ const DailyStatement = () => {
                       <tr
                         key={booking._id}
                         className="hover:bg-gray-50"
-                        style={{ backgroundColor: "rgba(255, 255, 0, 0.3)" }}>
+                        style={{ backgroundColor: "rgba(255, 255, 0, 0.3)" }}
+                      >
                         <td className="border border-green-600 p-2 text-center">
                           {index + 1}
                         </td>
@@ -546,7 +556,8 @@ const DailyStatement = () => {
                           <div className="flex items-center justify-center">
                             <Link
                               href={`/dashboard/${booking.bookingNo}`}
-                              passHref>
+                              passHref
+                            >
                               <span className="text-blue-500 cursor-pointer mr-2">
                                 {booking.bookingNo}
                               </span>
@@ -554,7 +565,8 @@ const DailyStatement = () => {
                             <Tooltip title="Copy">
                               <CopyToClipboard
                                 text={booking.bookingNo}
-                                onCopy={() => message.success("Copied!")}>
+                                onCopy={() => message.success("Copied!")}
+                              >
                                 <CopyOutlined className="cursor-pointer text-blue-500" />
                               </CopyToClipboard>
                             </Tooltip>
@@ -581,9 +593,9 @@ const DailyStatement = () => {
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bkash || 0}
                         </td>
-                        <td className="border border-green-600 p-2 text-center">
+                        {/* <td className="border border-green-600 p-2 text-center">
                           {totals.cash || 0}
-                        </td>
+                        </td> */}
                         <td className="border border-green-600 p-2 text-center">
                           {totals.bank || 0}
                         </td>
@@ -631,7 +643,8 @@ const DailyStatement = () => {
                             onClick={() => handleUpdate(booking._id)}
                             loading={submitting[booking._id]}
                             disabled={totals.dueAmount <= 0}
-                            style={{ backgroundColor: "#4CAF50" }}>
+                            style={{ backgroundColor: "#4CAF50" }}
+                          >
                             Update
                           </Button>
                         </td>
@@ -644,7 +657,8 @@ const DailyStatement = () => {
                     <tr style={{ backgroundColor: "#fffacd" }}>
                       <td
                         colSpan="8"
-                        className="border border-green-600 p-2 text-right font-bold">
+                        className="border border-green-600 p-2 text-right font-bold"
+                      >
                         Unpaid Invoices Total:
                       </td>
                       <td className="border border-green-600 p-2 text-center font-bold">
@@ -653,9 +667,9 @@ const DailyStatement = () => {
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.bkash}
                       </td>
-                      <td className="border border-green-600 p-2 text-center font-bold">
+                      {/* <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.cash}
-                      </td>
+                      </td> */}
                       <td className="border border-green-600 p-2 text-center font-bold">
                         {unpaidTotals?.bank}
                       </td>
