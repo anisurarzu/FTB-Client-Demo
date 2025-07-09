@@ -13,11 +13,10 @@ import {
   Image,
   Divider,
   Spin,
-  message,
   Row,
   Col,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined, PlusOutlined } from "@ant-design/icons";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
@@ -49,16 +48,18 @@ export default function HotelFormModal({
 
   const uploadProps = {
     name: "file",
-    multiple: false,
+    multiple: true,
     showUploadList: false,
-    beforeUpload: async (file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => setPreviewImage(e.target.result);
-      reader.readAsDataURL(file);
-      await handleImageUpload(file);
-      return false;
-    },
     accept: "image/*",
+    beforeUpload: async (file) => {
+      if (previewImage.length >= 4) {
+        message.warning("Maximum 4 images allowed.");
+        return false;
+      }
+
+      await handleImageUpload(file); // No base64 needed
+      return false; // prevent Ant from auto-uploading
+    },
   };
 
   return (
@@ -71,19 +72,29 @@ export default function HotelFormModal({
       centered
     >
       <Form layout="vertical" onFinish={formik.handleSubmit}>
-        <Form.Item label="Hotel Image">
+        <Form.Item label="Hotel Images (Max 4)">
           <Dragger {...uploadProps}>
-            {previewImage ? (
-              <Image
-                src={previewImage}
-                alt="Preview"
-                height={200}
-                style={{ objectFit: "cover", borderRadius: 4 }}
-              />
+            {previewImage.length > 0 ? (
+              <Row gutter={[8, 8]}>
+                {previewImage.map((img, index) => (
+                  <Col span={6} key={index}>
+                    <Image
+                      src={img}
+                      alt={`Preview ${index + 1}`}
+                      height={100}
+                      style={{
+                        objectFit: "cover",
+                        borderRadius: 4,
+                        width: "100%",
+                      }}
+                    />
+                  </Col>
+                ))}
+              </Row>
             ) : (
               <div style={{ textAlign: "center", padding: "24px 0" }}>
                 <UploadOutlined style={{ fontSize: 24 }} />
-                <p>Click or drag image to upload</p>
+                <p>Click or drag images (max 4) to upload</p>
               </div>
             )}
           </Dragger>
@@ -189,14 +200,14 @@ export default function HotelFormModal({
               <Select
                 mode="tags"
                 value={formik.values.amenities}
-                onChange={(value) =>
-                  formik.setFieldValue("amenities", value)
-                }
+                onChange={(value) => formik.setFieldValue("amenities", value)}
                 size="large"
               >
-                {["WiFi", "Spa", "Pool", "Parking", "Restaurant"].map((item) => (
-                  <Option key={item}>{item}</Option>
-                ))}
+                {["WiFi", "Spa", "Pool", "Parking", "Restaurant"].map(
+                  (item) => (
+                    <Option key={item}>{item}</Option>
+                  )
+                )}
               </Select>
             </Form.Item>
           </Col>
@@ -206,11 +217,7 @@ export default function HotelFormModal({
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <Button onClick={onCancel}>Cancel</Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={imageUploading}
-          >
+          <Button type="primary" htmlType="submit" loading={imageUploading}>
             {editMode ? "Update Hotel" : "Add Hotel"}
           </Button>
         </div>

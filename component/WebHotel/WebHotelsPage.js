@@ -30,7 +30,8 @@ export default function WebHotelsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentHotel, setCurrentHotel] = useState(null);
-  const [previewImage, setPreviewImage] = useState("");
+  const [previewImage, setPreviewImage] = useState([]); // ✅ should be an array
+
   const [imageUploading, setImageUploading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
@@ -62,17 +63,23 @@ export default function WebHotelsPage() {
   }, [searchText, hotels]);
 
   const handleImageUpload = async (file) => {
+    if (previewImage.length >= 4) {
+      message.warning("You can upload up to 4 images only.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("image", file);
+
     try {
       setImageUploading(true);
       const response = await axios.post(
-        `https://api.imgbb.com/1/upload?key=0d928e97225b72fcd198fa40d99a15d5`,
+        `https://api.imgbb.com/1/upload?key=06b717af6db1d3e1fd24a7d34d1ad80f`,
         formData
       );
-      if (response.data?.data?.url) {
-        setPreviewImage(response.data.data.url);
-        return response.data.data.url;
+      const url = response?.data?.data?.url;
+      if (url) {
+        setPreviewImage((prev) => [...prev, url]);
       }
     } catch {
       message.error("Image upload failed");
@@ -109,15 +116,14 @@ export default function WebHotelsPage() {
 
   const handleFormSubmit = async (values) => {
     try {
+      const payload = {
+        ...values,
+        image: previewImage, // image is an array of imgBB URLs
+      };
+
       const updated = editMode
-        ? await coreAxios.put(`/web-hotels/${currentHotel.id}`, {
-            ...values,
-            image: previewImage,
-          })
-        : await coreAxios.post("/web-hotels", {
-            ...values,
-            image: previewImage,
-          });
+        ? await coreAxios.put(`/web-hotels/${currentHotel.id}`, payload)
+        : await coreAxios.post("/web-hotels", payload);
 
       const updatedHotel = updated.data;
       setHotels((prev) =>
@@ -127,7 +133,7 @@ export default function WebHotelsPage() {
       );
       message.success(`Hotel ${editMode ? "updated" : "added"} successfully`);
       setModalVisible(false);
-      setPreviewImage("");
+      setPreviewImage([]);
     } catch {
       message.error("Failed to save hotel");
     }

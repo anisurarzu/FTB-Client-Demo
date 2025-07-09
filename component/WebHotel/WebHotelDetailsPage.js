@@ -1,12 +1,28 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button, Card, message, Space, Table, Modal, Tag, Image, Row, Col, Divider, Typography } from "antd";
+import {
+  Button,
+  Card,
+  message,
+  Space,
+  Table,
+  Modal,
+  Tag,
+  Image,
+  Row,
+  Col,
+  Divider,
+  Typography,
+  Collapse,
+} from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import coreAxios from "@/utils/axiosInstance";
 import WebHotelDetailsFormModal from "./WebHotelDetailsFormModal";
+import dayjs from "dayjs";
 
 const { Text, Title } = Typography;
+const { Panel } = Collapse;
 
 export default function WebHotelDetailsPage() {
   const [details, setDetails] = useState([]);
@@ -75,36 +91,74 @@ export default function WebHotelDetailsPage() {
     }
   };
 
+  const renderCategoryPriceRanges = (priceRanges) => {
+    if (!priceRanges || priceRanges.length === 0) {
+      return <Text type="secondary">No price ranges defined</Text>;
+    }
+
+    return priceRanges.map((range, index) => {
+      const startDate = dayjs(range.dates[0]).format("MMM D, YYYY");
+      const endDate = dayjs(range.dates[1]).format("MMM D, YYYY");
+      const discountedPrice =
+        range.price - range.price * (range.discountPercent / 100);
+
+      return (
+        <div key={index} style={{ marginBottom: 16 }}>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Text strong>Date Range:</Text> {startDate} - {endDate}
+            </Col>
+            <Col span={8}>
+              <Text strong>Price:</Text> {discountedPrice.toFixed(2)} BDT
+              {range.discountPercent > 0 && (
+                <Text delete type="secondary" style={{ marginLeft: 8 }}>
+                  {range.price} BDT
+                </Text>
+              )}
+            </Col>
+            <Col span={8}>
+              {range.discountPercent > 0 && (
+                <Tag color="red">Save {range.discountPercent}%</Tag>
+              )}
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Text strong>Taxes:</Text> {range.taxes} BDT
+            </Col>
+            <Col span={12}>
+              <Text strong>Total:</Text>{" "}
+              {(discountedPrice + range.taxes).toFixed(2)} BDT
+            </Col>
+          </Row>
+          <Divider dashed />
+        </div>
+      );
+    });
+  };
+
   const columns = [
-    { 
-      title: "Hotel Name", 
+    {
+      title: "Hotel Name",
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
         <Button type="link" onClick={() => handleViewDetails(record)}>
           {text}
         </Button>
-      )
-    },
-    { 
-      title: "Location", 
-      dataIndex: "location",
-      key: "location" 
-    },
-    { 
-      title: "Rating", 
-      dataIndex: "rating",
-      key: "rating",
-      render: (rating) => <Tag color={rating >= 4 ? 'green' : rating >= 3 ? 'orange' : 'red'}>{rating?.toFixed(1)}</Tag>
+      ),
     },
     {
-      title: "Room Types",
-      key: "roomTypes",
+      title: "Categories",
+      key: "categories",
       render: (_, record) => (
         <div>
-          {record.roomTypes.map((room, i) => (
-            <Tag key={i}>{room.name}</Tag>
+          {record.categories?.slice(0, 2).map((category, i) => (
+            <Tag key={i}>{category.categoryName}</Tag>
           ))}
+          {record.categories?.length > 2 && (
+            <Tag>+{record.categories.length - 2} more</Tag>
+          )}
         </div>
       ),
     },
@@ -119,57 +173,13 @@ export default function WebHotelDetailsPage() {
           <Button size="small" onClick={() => handleEdit(record)}>
             Edit
           </Button>
-          <Button
-            danger
-            size="small"
-            onClick={() => handleDelete(record._id)}
-          >
+          <Button danger size="small" onClick={() => handleDelete(record._id)}>
             Delete
           </Button>
         </Space>
       ),
     },
   ];
-
-  const renderRoomOptions = (options) => {
-    return options.map((option, index) => (
-      <div key={index} style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
-          <Col span={8}>
-            <Text strong>Type:</Text> {option.type}
-          </Col>
-          <Col span={8}>
-            <Text strong>Price:</Text> {option.price} BDT
-            {option.discountPercent > 0 && (
-              <Text delete type="secondary" style={{ marginLeft: 8 }}>
-                {option.originalPrice} BDT
-              </Text>
-            )}
-          </Col>
-          <Col span={8}>
-            {option.discountPercent > 0 && (
-              <Tag color="red">Save {option.discountPercent}%</Tag>
-            )}
-          </Col>
-        </Row>
-        <Row gutter={16}>
-          <Col span={8}>
-            <Text strong>Adults:</Text> {option.adults}
-          </Col>
-          <Col span={8}>
-            <Text strong>Breakfast:</Text> {option.breakfast ? 'Included' : 'Not included'}
-          </Col>
-          <Col span={8}>
-            <Text strong>Cancellation:</Text> 
-            <Tag color={option.cancellation === 'Refundable' ? 'green' : 'red'}>
-              {option.cancellation}
-            </Tag>
-          </Col>
-        </Row>
-        <Divider dashed />
-      </div>
-    ));
-  };
 
   return (
     <Card
@@ -222,71 +232,87 @@ export default function WebHotelDetailsPage() {
         {currentDetail && (
           <div>
             <Title level={4}>{currentDetail.name}</Title>
-            <Text type="secondary">{currentDetail.location}</Text>
-            
-            <Divider orientation="left">Images</Divider>
-            <Image.PreviewGroup>
-              <Row gutter={16}>
-                {currentDetail.images.map((img, index) => (
-                  <Col span={8} key={index}>
-                    <Image src={img} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
-                  </Col>
-                ))}
-              </Row>
-            </Image.PreviewGroup>
-            
-            <Divider orientation="left">Rating</Divider>
-            <Tag color={currentDetail.rating >= 4 ? 'green' : currentDetail.rating >= 3 ? 'orange' : 'red'}>
-              {currentDetail.rating?.toFixed(1)}
-            </Tag>
-            
-            <Divider orientation="left">Room Types</Divider>
-            {currentDetail.roomTypes.map((room, index) => (
-              <div key={index} style={{ marginBottom: 24 }}>
-                <Title level={5}>{room.name}</Title>
-                {room.description && <Text>{room.description}</Text>}
-                
-                {room.roomImages && room.roomImages.length > 0 && (
-                  <Image.PreviewGroup>
-                    <Row gutter={16} style={{ marginTop: 8 }}>
-                      {room.roomImages.map((img, imgIndex) => (
-                        <Col span={8} key={imgIndex}>
-                          <Image src={img} style={{ width: '100%', height: 100, objectFit: 'cover' }} />
-                        </Col>
-                      ))}
-                    </Row>
-                  </Image.PreviewGroup>
-                )}
-                
-                <Divider orientation="left" style={{ marginTop: 16 }}>Options</Divider>
-                {renderRoomOptions(room.options)}
-              </div>
-            ))}
-            
-            {currentDetail.whatsNearby && currentDetail.whatsNearby.length > 0 && (
-              <>
-                <Divider orientation="left">What's Nearby</Divider>
-                {currentDetail.whatsNearby.map((item, index) => (
-                  <div key={index}>
-                    <Text strong>{item.name}</Text> - {item.distance}
-                  </div>
-                ))}
-              </>
-            )}
-            
-            {currentDetail.facilities && currentDetail.facilities.length > 0 && (
-              <>
-                <Divider orientation="left">Facilities</Divider>
-                <Row gutter={16}>
-                  {currentDetail.facilities.map((facility, index) => (
-                    <Col span={8} key={index}>
-                      <Text>{facility}</Text>
+
+            <Divider orientation="left">Categories</Divider>
+            <Collapse accordion>
+              {currentDetail.categories?.map((category, index) => (
+                <Panel
+                  key={index}
+                  header={category.categoryName || `Category ${index + 1}`}
+                >
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Text strong>Adults:</Text> {category.adultCount || 0}
                     </Col>
+                    <Col span={12}>
+                      <Text strong>Children:</Text> {category.childCount || 0}
+                    </Col>
+                  </Row>
+
+                  {category.categoryDetails && (
+                    <>
+                      <Divider orientation="left">Details</Divider>
+                      <Text>{category.categoryDetails}</Text>
+                    </>
+                  )}
+
+                  {category.images && category.images.length > 0 && (
+                    <>
+                      <Divider orientation="left">Images</Divider>
+                      <Image.PreviewGroup>
+                        <Row gutter={16}>
+                          {category.images?.map((img, imgIndex) => (
+                            <Col span={8} key={imgIndex}>
+                              <Image
+                                src={img.url || img}
+                                style={{
+                                  width: "100%",
+                                  height: 120,
+                                  objectFit: "cover",
+                                }}
+                              />
+                            </Col>
+                          ))}
+                        </Row>
+                      </Image.PreviewGroup>
+                    </>
+                  )}
+
+                  {category.amenities && category.amenities.length > 0 && (
+                    <>
+                      <Divider orientation="left">Amenities</Divider>
+                      <Row gutter={16}>
+                        {category.amenities.map((amenity, amenityIndex) => (
+                          <Col span={8} key={amenityIndex}>
+                            <Text>{amenity}</Text>
+                          </Col>
+                        ))}
+                      </Row>
+                    </>
+                  )}
+
+                  {category.priceRanges && category.priceRanges.length > 0 && (
+                    <>
+                      <Divider orientation="left">Price Ranges</Divider>
+                      {renderCategoryPriceRanges(category.priceRanges)}
+                    </>
+                  )}
+                </Panel>
+              ))}
+            </Collapse>
+
+            {currentDetail.whatsNearby &&
+              currentDetail.whatsNearby.length > 0 && (
+                <>
+                  <Divider orientation="left">What's Nearby</Divider>
+                  {currentDetail.whatsNearby.map((item, index) => (
+                    <div key={index}>
+                      <Text strong>{item.name}</Text> - {item.distance}
+                    </div>
                   ))}
-                </Row>
-              </>
-            )}
-            
+                </>
+              )}
+
             {currentDetail.policies && currentDetail.policies.length > 0 && (
               <>
                 <Divider orientation="left">Policies</Divider>
