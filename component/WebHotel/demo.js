@@ -87,7 +87,14 @@ const WebHotelDetailsFormModal = ({
             ...initialValues,
             categories: initialValues.categories?.map((category, index) => ({
               ...category,
-              images: category.images ? [...category.images] : [], // Ensure this is always an array
+              images: category.images?.map((img) => ({
+                uid: Math.random().toString(36).substring(2, 9),
+                name: img.name || "image",
+                status: "done",
+                url: img.url,
+                size: img.size || 0,
+                type: img.type || "image/jpeg",
+              })),
               priceRanges: category.priceRanges?.map((range) => ({
                 ...range,
                 dates: [
@@ -107,7 +114,7 @@ const WebHotelDetailsFormModal = ({
       if (initialValues?.categories) {
         const initialImages = {};
         initialValues.categories.forEach((category, index) => {
-          initialImages[index] = category.images ? [...category.images] : [];
+          initialImages[index] = category.images || [];
         });
         setCategoryImages(initialImages);
       } else {
@@ -157,12 +164,10 @@ const WebHotelDetailsFormModal = ({
 
       if (res.data?.data?.url) {
         const imageData = {
-          uid: Math.random().toString(36).substring(2, 9),
           url: res.data.data.url,
           name: file.name,
           size: file.size,
           type: file.type,
-          status: "done",
         };
 
         onSuccess(imageData);
@@ -429,21 +434,11 @@ const WebHotelDetailsFormModal = ({
                             multiple
                             accept="image/*"
                             maxCount={10}
-                            fileList={
-                              Array.isArray(
-                                form.getFieldValue([
-                                  "categories",
-                                  name,
-                                  "images",
-                                ])
-                              )
-                                ? form.getFieldValue([
-                                    "categories",
-                                    name,
-                                    "images",
-                                  ])
-                                : []
-                            }
+                            fileList={form.getFieldValue([
+                              "categories",
+                              name,
+                              "images",
+                            ])}
                           >
                             <div>
                               <PlusOutlined />
