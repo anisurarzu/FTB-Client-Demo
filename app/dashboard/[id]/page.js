@@ -24,7 +24,7 @@ const Invoice = ({ params }) => {
   const fetchInvoiceInfo = async () => {
     try {
       setLoading(true);
-      const response = await coreAxios.get(`/bookings/bookingNo/${id}`);
+      const response = await coreAxios.get(`/web/booking/${id}`);
       if (response?.status === 200) {
         const filteredData = response?.data.filter(
           (item) => item.statusID !== 255
@@ -143,7 +143,8 @@ const Invoice = ({ params }) => {
           : data?.[0]?.hotelID === 4
           ? "Shopno Bilash Holiday Suites"
           : "Samudra Bari 2024"
-      }`}>
+      }`}
+    >
       {loading ? (
         <div className="flex justify-center items-center h-screen">
           <Spin size="large" />
@@ -155,14 +156,16 @@ const Invoice = ({ params }) => {
               type="primary"
               onClick={downloadPDF}
               icon={<DownloadOutlined />}
-              className="shadow-md">
+              className="shadow-md"
+            >
               Download PDF
             </Button>
             <Button
               type="primary"
               onClick={print}
               icon={<PrinterOutlined />}
-              className="shadow-md">
+              className="shadow-md"
+            >
               Print
             </Button>
           </div>
@@ -170,7 +173,8 @@ const Invoice = ({ params }) => {
           <div
             id="invoice-card"
             className="bg-white p-8 rounded-lg shadow-md border border-gray-300"
-            style={{ fontSize: "12px" }}>
+            style={{ fontSize: "12px" }}
+          >
             <div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="logo-container flex items-center justify-center">
@@ -220,7 +224,8 @@ const Invoice = ({ params }) => {
                 </div>
                 <div className="mt-8 text-center">
                   <h4
-                    className={`${theme.color} font-semibold text-xl uppercase`}>
+                    className={`${theme.color} font-semibold text-xl uppercase`}
+                  >
                     {data?.[0]?.hotelName} INVOICE
                   </h4>
                 </div>

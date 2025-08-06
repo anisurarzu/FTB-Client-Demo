@@ -20,16 +20,25 @@ import {
   Space,
   Typography,
 } from "antd";
-import { ReloadOutlined, CopyOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  ReloadOutlined,
+  CopyOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import coreAxios from "@/utils/axiosInstance";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import Link from "next/link";
 import dayjs from "dayjs";
+import { useRouter } from "next/navigation";
+import CreateBookingPage from "./CreateBookingPage";
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
 
-const WebBooking = () => {
+const WebBookingDashboard = () => {
+  const router = useRouter();
   const [webBookingInfo, setWebBookingInfo] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filteredBookings, setFilteredBookings] = useState([]);
@@ -38,7 +47,10 @@ const WebBooking = () => {
   const [filterDate, setFilterDate] = useState(null);
   const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
   const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [currentBooking, setCurrentBooking] = useState(null);
+  const [bookingToDelete, setBookingToDelete] = useState(null);
   const [form] = Form.useForm();
   const screens = useBreakpoint();
 
@@ -60,6 +72,32 @@ const WebBooking = () => {
   useEffect(() => {
     fetchWebBookingInfo();
   }, []);
+
+  const handleDeleteBooking = async (bookingId) => {
+    try {
+      const response = await coreAxios.delete(`/web/booking/${bookingId}`);
+      if (response.status === 200) {
+        message.success("Booking deleted successfully");
+        fetchWebBookingInfo();
+      }
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Failed to delete booking"
+      );
+    }
+  };
+
+  const showDeleteModal = (booking) => {
+    setBookingToDelete(booking);
+    setIsDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (bookingToDelete) {
+      handleDeleteBooking(bookingToDelete._id);
+      setIsDeleteModalVisible(false);
+    }
+  };
 
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
@@ -110,6 +148,11 @@ const WebBooking = () => {
   const showDetailsModal = (booking) => {
     setCurrentBooking(booking);
     setIsDetailsModalVisible(true);
+  };
+
+  const handleCreateSuccess = () => {
+    setIsCreateModalVisible(false);
+    fetchWebBookingInfo();
   };
 
   const handleStatusUpdate = async () => {
@@ -223,6 +266,20 @@ const WebBooking = () => {
         >
           {screens.xs ? "Refresh" : screens.sm ? "Refresh" : <ReloadOutlined />}
         </Button>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setIsCreateModalVisible(true)}
+          style={screens.xs ? { width: "100%" } : {}}
+        >
+          {screens.xs ? (
+            "New Booking"
+          ) : screens.sm ? (
+            "New Booking"
+          ) : (
+            <PlusOutlined />
+          )}
+        </Button>
       </div>
 
       {screens.md ? (
@@ -280,12 +337,20 @@ const WebBooking = () => {
                             gap: 4,
                           }}
                         >
-                          <Link href={`/dashboard/${booking.bookingNo}`}>
-                            <span
-                              style={{ color: "#1890ff", cursor: "pointer" }}
+                          <Link
+                            target="_blank"
+                            href={`/dashboard/${booking.bookingNo}`}
+                            passHref
+                          >
+                            <p
+                              style={{
+                                color: "#1890ff",
+                                cursor: "pointer",
+                                marginRight: 8,
+                              }}
                             >
                               {booking.bookingNo}
-                            </span>
+                            </p>
                           </Link>
                           <CopyToClipboard
                             text={booking.bookingNo}
@@ -377,6 +442,14 @@ const WebBooking = () => {
                           >
                             Status
                           </Button>
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => showDeleteModal(booking)}
+                          >
+                            {screens.md ? "Delete" : ""}
+                          </Button>
                         </Space>
                       </td>
                     </tr>
@@ -441,6 +514,14 @@ const WebBooking = () => {
                         onClick={() => showStatusModal(booking)}
                       >
                         Status
+                      </Button>
+                      <Button
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => showDeleteModal(booking)}
+                      >
+                        Delete
                       </Button>
                     </Space>
                   </Space>
@@ -601,6 +682,35 @@ const WebBooking = () => {
         )}
       </Modal>
 
+      {/* Create Booking Modal */}
+      <Modal
+        title="Create New Booking"
+        open={isCreateModalVisible}
+        onCancel={() => setIsCreateModalVisible(false)}
+        footer={null}
+        width={screens.xs ? "100%" : 800}
+        style={{ maxWidth: "100%", top: screens.xs ? 0 : 20 }}
+      >
+        <CreateBookingPage
+          isModal={true}
+          onSuccess={handleCreateSuccess}
+          setIsCreateModalVisible={setIsCreateModalVisible}
+        />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Confirm Delete"
+        open={isDeleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => setIsDeleteModalVisible(false)}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+      >
+        <p>Are you sure you want to delete booking {bookingToDelete?.bookingNo}?</p>
+        <p>This action cannot be undone.</p>
+      </Modal>
+
       {/* Pagination Footer */}
       <div
         style={{
@@ -637,4 +747,4 @@ const WebBooking = () => {
   );
 };
 
-export default WebBooking;
+export default WebBookingDashboard;

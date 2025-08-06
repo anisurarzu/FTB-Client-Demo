@@ -31,6 +31,8 @@ import Expense from "@/component/Expense";
 import ExpenseInfo from "@/component/Expense/ExpenseInfo";
 import WebHotelsPage from "@/component/WebHotel/WebHotelsPage";
 import WebHotelDetailsPage from "@/component/WebHotel/WebHotelDetailsPage";
+import RoomNumbers from "@/component/WebHotel/RoomNumbers";
+import WebBookingDashboard from "@/component/WebBooking/WebBookingDashboard";
 
 const { Header, Sider, Content } = Layout;
 
@@ -71,7 +73,7 @@ const rolePermissions = {
       key: "11",
       label: "Web Bookings",
       icon: <InfoCircleOutlined />,
-      component: <WebBooking />,
+      component: <WebBookingDashboard />,
     },
     {
       key: "10",
@@ -96,6 +98,12 @@ const rolePermissions = {
       label: "Web Hotel Details",
       icon: <UnorderedListOutlined />,
       component: <WebHotelDetailsPage />,
+    },
+    {
+      key: "13",
+      label: "Web Rooms",
+      icon: <UnorderedListOutlined />,
+      component: <RoomNumbers />,
     },
     {
       key: "5",
@@ -275,7 +283,8 @@ const Dashboard = ({ sliders }) => {
         mode="inline"
         selectedKeys={[selectedMenu]}
         onClick={(e) => setSelectedMenu(e.key)}
-        className="bg-white">
+        className="bg-white"
+      >
         {allowedPages.map((page) => (
           <Menu.Item key={page.key} icon={page.icon} className="bg-white">
             <span className="text-black font-medium">{page.label}</span>
@@ -292,7 +301,8 @@ const Dashboard = ({ sliders }) => {
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        className="site-layout-background hidden lg:block">
+        className="site-layout-background hidden lg:block"
+      >
         <div className="logo-container py-2 flex items-center justify-center">
           <Image
             src="/images/logo.png"
@@ -313,7 +323,8 @@ const Dashboard = ({ sliders }) => {
         onClose={onClose}
         open={visible}
         width="50vw" // Covers 3/4 of the viewport width
-        bodyStyle={{ padding: 0 }}>
+        bodyStyle={{ padding: 0 }}
+      >
         {renderMenuItems()}
       </Drawer>
 
@@ -322,7 +333,8 @@ const Dashboard = ({ sliders }) => {
           style={{
             background: "linear-gradient(45deg, #8A99EB, #9DE1FB, #AFC7F3)",
           }}
-          className="flex justify-between items-center pr-8 py-4 shadow-md">
+          className="flex justify-between items-center pr-8 py-4 shadow-md"
+        >
           <Button
             icon={<MenuOutlined />}
             className="lg:hidden"
